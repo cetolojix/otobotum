@@ -162,7 +162,7 @@ export default function PricingPage() {
         {/* Payment Methods */}
         <div className="text-center mt-20 space-y-8">
           <h2 className="text-3xl font-bold text-foreground">Güvenli Ödeme Yöntemleri</h2>
-          <div className="flex justify-center items-center space-x-8 opacity-70">
+          <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-8">
             <div className="hologram-card px-6 py-3 rounded-xl">
               <span className="font-bold text-foreground">Kredi Kartı</span>
             </div>
@@ -173,6 +173,18 @@ export default function PricingPage() {
               <span className="font-bold text-foreground">Havale/EFT</span>
             </div>
           </div>
+
+          {/* Payment Provider Logo Band */}
+          <div className="flex justify-center items-center mt-8">
+            <div className="hologram-card px-8 py-6 rounded-2xl">
+              <img
+                src="/images/payment-logos.png"
+                alt="Iyzico ile Öde, Mastercard, Visa, American Express, Troy"
+                className="h-10 sm:h-12 w-auto object-contain"
+              />
+            </div>
+          </div>
+
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Tüm ödemeleriniz Iyzico güvenli ödeme altyapısı ile 256-bit SSL şifreleme ile korunmaktadır. Kart
             bilgileriniz hiçbir zaman sistemimizde saklanmaz.

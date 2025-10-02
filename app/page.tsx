@@ -478,6 +478,14 @@ export default async function HomePage() {
               <span className="text-neon-cyan font-semibold"> Iyzico</span> güvencesiyle güvenli alışveriş.
             </p>
 
+            <div className="flex justify-center mt-4 sm:mt-6">
+              <img
+                src="/images/payment-logos.png"
+                alt="Iyzico ile Öde, Mastercard, Visa, American Express, Troy"
+                className="h-8 sm:h-10 w-auto object-contain"
+              />
+            </div>
+
             <div className="flex items-center justify-center space-x-4 sm:space-x-6 mt-3 sm:mt-4">
               <div className="text-center">
                 <div className="text-sm sm:text-lg font-bold text-neon-cyan">Iyzico</div>
