@@ -46,12 +46,16 @@ export async function GET(request: NextRequest) {
       const { data: basicPackage } = await supabase.from("packages").select("id").eq("name", "basic").single()
 
       if (basicPackage) {
-        // Create user package entry
-        const { error: packageError } = await supabase.from("user_packages").insert({
-          user_id: user.id,
-          package_id: basicPackage.id,
-          is_active: true,
-        })
+        const { error: packageError } = await supabase.from("user_packages").upsert(
+          {
+            user_id: user.id,
+            package_id: basicPackage.id,
+            is_active: true,
+          },
+          {
+            onConflict: "user_id,package_id",
+          },
+        )
 
         if (!packageError) {
           // Retry getting package info

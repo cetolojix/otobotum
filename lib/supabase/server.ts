@@ -7,30 +7,9 @@ import { cookies } from "next/headers"
  * it.
  */
 export async function createClient() {
-  console.log("[v0] Checking Supabase environment variables...")
-  console.log("[v0] SUPABASE_URL:", process.env.SUPABASE_URL ? "✓ Found" : "✗ Missing")
-  console.log("[v0] SUPABASE_ANON_KEY:", process.env.SUPABASE_ANON_KEY ? "✓ Found" : "✗ Missing")
-  console.log("[v0] NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "✓ Found" : "✗ Missing")
-  console.log(
-    "[v0] NEXT_PUBLIC_SUPABASE_ANON_KEY:",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "✓ Found" : "✗ Missing",
-  )
-
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  console.log("[v0] Final supabaseUrl:", supabaseUrl ? "✓ Set" : "✗ Not set")
-  console.log("[v0] Final supabaseAnonKey:", supabaseAnonKey ? "✓ Set" : "✗ Not set")
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "Missing Supabase environment variables. Please ensure SUPABASE_URL and SUPABASE_ANON_KEY are set in your project settings.",
-    )
-  }
-
   const cookieStore = await cookies()
 
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: {
       getAll() {
         return cookieStore.getAll()

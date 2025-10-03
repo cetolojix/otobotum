@@ -38,14 +38,14 @@ export async function checkSubscriptionAccess(): Promise<SubscriptionStatus> {
     }
   }
 
-  // Check trial period
   const { data: trial } = await supabase.from("trial_periods").select("*").eq("user_id", user.id).maybeSingle()
 
   const now = new Date()
-  const isInTrial = trial && new Date(trial.trial_end_date) > now && !trial.is_trial_used
-  const trialDaysLeft = trial
-    ? Math.max(0, Math.ceil((new Date(trial.trial_end_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
-    : 0
+  const isInTrial = trial && trial.is_active && new Date(trial.ends_at) > now
+  const trialDaysLeft =
+    trial && trial.is_active
+      ? Math.max(0, Math.ceil((new Date(trial.ends_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0
 
   // If in trial, user has access
   if (isInTrial) {
@@ -108,13 +108,12 @@ export async function initializeTrialForNewUser(userId: string) {
   const supabase = await createClient()
 
   // Check if trial already exists
-  const { data: existingTrial } = await supabase.from("trial_periods").select("*").eq("user_id", userId).single()
+  const { data: existingTrial } = await supabase.from("trial_periods").select("*").eq("user_id", userId).maybeSingle()
 
   if (existingTrial) {
     return existingTrial
   }
 
-  // Create trial period (7 days)
   const trialEndDate = new Date()
   trialEndDate.setDate(trialEndDate.getDate() + 7)
 
@@ -122,9 +121,9 @@ export async function initializeTrialForNewUser(userId: string) {
     .from("trial_periods")
     .insert({
       user_id: userId,
-      trial_start_date: new Date().toISOString(),
-      trial_end_date: trialEndDate.toISOString(),
-      is_trial_used: false,
+      started_at: new Date().toISOString(),
+      ends_at: trialEndDate.toISOString(),
+      is_active: true,
     })
     .select()
     .single()
@@ -134,17 +133,17 @@ export async function initializeTrialForNewUser(userId: string) {
     return null
   }
 
-  // Also assign basic package during trial
-  const { data: basicPackage } = await supabase.from("packages").select("id").eq("name", "basic").single()
+  const { data: starterPackage } = await supabase.from("packages").select("id").eq("name", "starter").single()
 
-  if (basicPackage) {
+  if (starterPackage) {
     await supabase.from("user_subscriptions").upsert({
       user_id: userId,
-      package_id: basicPackage.id,
+      package_id: starterPackage.id,
       status: "active",
-      is_trial: true,
-      trial_ends_at: trialEndDate.toISOString(),
-      started_at: new Date().toISOString(),
+      trial_start: new Date().toISOString(),
+      trial_end: trialEndDate.toISOString(),
+      current_period_start: new Date().toISOString(),
+      current_period_end: trialEndDate.toISOString(),
     })
   }
 
