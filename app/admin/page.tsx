@@ -2,6 +2,8 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { AdminDashboard } from "@/components/admin-dashboard"
 import { debugLog } from "@/lib/debug"
+import { Navigation } from "@/components/navigation"
+import { Footer } from "@/components/footer"
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -55,5 +57,15 @@ export default async function AdminPage() {
     instancesError,
   })
 
-  return <AdminDashboard users={users || []} instances={instances || []} currentUser={user} />
+  return (
+    <div className="min-h-screen bg-background digital-grid relative">
+      <div className="circuit-pattern absolute inset-0 pointer-events-none" />
+
+      <Navigation />
+
+      <AdminDashboard users={users || []} instances={instances || []} currentUser={user} />
+
+      <Footer />
+    </div>
+  )
 }

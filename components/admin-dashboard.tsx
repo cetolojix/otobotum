@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -22,10 +21,8 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { debugLog } from "@/lib/debug"
 import {
-  LogOut,
   Users,
   Server,
-  Settings,
   Search,
   UserPlus,
   Mail,
@@ -33,11 +30,16 @@ import {
   Edit,
   Shield,
   AlertTriangle,
+  Phone,
+  Building,
+  Calendar,
+  MapPin,
   Globe,
-  User,
 } from "lucide-react"
 import AdminActivityMonitor from "./admin-activity-monitor"
 import { getTranslation, languages } from "@/lib/i18n"
+import { Settings, User, LogOut } from "lucide-react" // Importing undeclared variables
+import { updateUserRole } from "@/app/actions/admin-actions"
 
 interface Profile {
   id: string
@@ -45,6 +47,16 @@ interface Profile {
   full_name: string | null
   role: string
   created_at: string
+  phone: string | null
+  username: string | null
+  address: string | null
+  city: string | null
+  district: string | null
+  company_name: string | null
+  company_address: string | null
+  company_tax_number: string | null
+  company_website: string | null
+  account_type: string | null
 }
 
 interface Instance {
@@ -75,11 +87,17 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
   const [selectedInstances, setSelectedInstances] = useState<Instance[]>(instances)
   const [searchTerm, setSearchTerm] = useState("")
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false)
-  const [isEditUserOpen, setIsEditUserOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<Profile | null>(null)
+  // Removed isEditUserOpen, editingUser, and handleEditDialogChange, handleCloseEditDialog, handleEditUser logic for editing directly in the component.
+  const [isViewUserOpen, setIsViewUserOpen] = useState(false)
+  const [viewingUser, setViewingUser] = useState<Profile | null>(null)
   const [newUser, setNewUser] = useState({ email: "", fullName: "", role: "user", password: "" })
   const router = useRouter()
   const supabase = createClient()
+
+  // The useRef for dialog opening is no longer needed as edit dialog is removed.
+  // const isOpeningDialogRef = useRef(false)
+
+  // Removed handleEditDialogChange function.
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -92,11 +110,11 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId)
+      const result = await updateUserRole(userId, newRole)
 
-      if (error) {
-        debugLog("Error updating role:", error)
-        alert("Rol güncellenirken hata oluştu: " + error.message)
+      if (result.error) {
+        debugLog("Error updating role:", result.error)
+        alert("Rol güncellenirken hata oluştu: " + result.error)
         return
       }
 
@@ -202,6 +220,16 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
         full_name: newUser.fullName || null,
         role: newUser.role,
         created_at: new Date().toISOString(),
+        phone: null,
+        username: null,
+        address: null,
+        city: null,
+        district: null,
+        company_name: null,
+        company_address: null,
+        company_tax_number: null,
+        company_website: null,
+        account_type: null,
       }
 
       setSelectedUsers((prev) => [newProfile, ...prev])
@@ -214,33 +242,10 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
     }
   }
 
-  const handleEditUser = async () => {
-    if (!editingUser) return
-
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: editingUser.full_name,
-          role: editingUser.role,
-        })
-        .eq("id", editingUser.id)
-
-      if (error) {
-        debugLog("Error updating user:", error)
-        alert("Kullanıcı güncellenirken hata oluştu: " + error.message)
-        return
-      }
-
-      setSelectedUsers((prev) => prev.map((user) => (user.id === editingUser.id ? editingUser : user)))
-
-      setIsEditUserOpen(false)
-      setEditingUser(null)
-      alert(t.userUpdated)
-    } catch (error) {
-      debugLog("Error updating user:", error)
-      alert("Kullanıcı güncellenirken beklenmeyen bir hata oluştu")
-    }
+  // Removed handleEditUser function that was responsible for direct editing within the dialog.
+  // Replaced with a new function that opens the edit page in a new tab.
+  const handleEditUser = (userId: string) => {
+    window.open(`/admin/edit/${userId}`, "_blank")
   }
 
   const handleDeleteInstance = async (instanceId: string, instanceName: string) => {
@@ -356,7 +361,9 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
   const filteredUsers = selectedUsers.filter(
     (user) =>
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase())),
+      (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.phone && user.phone.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (user.company_name && user.company_name.toLowerCase().includes(searchTerm.toLowerCase())),
   )
 
   const filteredInstances = selectedInstances.filter(
@@ -365,8 +372,24 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
       (instance.user_email && instance.user_email.toLowerCase().includes(searchTerm.toLowerCase())),
   )
 
+  // Removed handleEditButtonClick and handleCloseEditDialog as the edit dialog is removed.
+  // const handleEditButtonClick = (user: Profile) => {
+  //   console.log("[v0] Edit button clicked for:", user.email)
+  //   setEditingUser(user)
+  //   isOpeningDialogRef.current = true // Set ref to true before opening dialog
+  //   setIsEditUserOpen(true)
+  // }
+
+  // const handleCloseEditDialog = () => {
+  //   console.log("[v0] Closing edit dialog")
+  //   setIsEditUserOpen(false)
+  //   setEditingUser(null)
+  // }
+
+  // console.log("[v0] Component render - isEditUserOpen:", isEditUserOpen, "editingUser:", editingUser?.email || "null")
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -409,202 +432,263 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="container mx-auto px-6 py-12 relative z-10">
+        {/* Header Section */}
+        <div className="text-center space-y-6 mb-16">
+          <h1 className="text-5xl md:text-6xl font-bold tech-gradient text-balance leading-tight">
+            {t.adminDashboard}
+          </h1>
+          <p className="text-xl text-foreground/80 max-w-3xl mx-auto text-balance">{t.adminDashboardDesc}</p>
+        </div>
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t.totalUsers}</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
-              <p className="text-xs text-muted-foreground">{users.filter((u) => u.role === "admin").length} admin</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+          <div className="hologram-card p-6 rounded-2xl">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-muted-foreground">{t.totalUsers}</div>
+              <Users className="h-5 w-5 text-neon-cyan" />
+            </div>
+            <div className="text-3xl font-bold neon-text">{users.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">{users.filter((u) => u.role === "admin").length} admin</p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t.totalInstances}</CardTitle>
-              <Server className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{instances.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {instances.filter((i) => i.status === "open").length} aktif
-              </p>
-            </CardContent>
-          </Card>
+          <div className="hologram-card p-6 rounded-2xl">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-muted-foreground">{t.totalInstances}</div>
+              <Server className="h-5 w-5 text-neon-blue" />
+            </div>
+            <div className="text-3xl font-bold neon-text">{instances.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {instances.filter((i) => i.status === "open").length} aktif
+            </p>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>{t.newUsers}</CardTitle>
-                  <CardDescription>{t.lastWeek}</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {
-                  users.filter((u) => {
-                    const createdDate = new Date(u.created_at)
-                    const weekAgo = new Date()
-                    weekAgo.setDate(weekAgo.getDate() - 7)
-                    return createdDate > weekAgo
-                  }).length
-                }
-              </div>
-              <p className="text-xs text-muted-foreground">{t.lastWeek}</p>
-            </CardContent>
-          </Card>
+          <div className="hologram-card p-6 rounded-2xl">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-muted-foreground">{t.newUsers}</div>
+              <UserPlus className="h-5 w-5 text-tech-green" />
+            </div>
+            <div className="text-3xl font-bold neon-text">
+              {
+                users.filter((u) => {
+                  const createdDate = new Date(u.created_at)
+                  const weekAgo = new Date()
+                  weekAgo.setDate(weekAgo.getDate() - 7)
+                  return createdDate > weekAgo
+                }).length
+              }
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">{t.lastWeek}</p>
+          </div>
+
+          <div className="hologram-card p-6 rounded-2xl">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-muted-foreground">Aktif Instance'lar</div>
+              <Server className="h-5 w-5 text-tech-orange" />
+            </div>
+            <div className="text-3xl font-bold neon-text">{instances.filter((i) => i.status === "open").length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Toplam {instances.length} instance</p>
+          </div>
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <div className="mb-8">
+          <div className="relative max-w-2xl mx-auto">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
               placeholder={t.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-12 h-14 text-lg hologram-card border-0"
             />
           </div>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="users" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="users">{t.userManagement}</TabsTrigger>
-            <TabsTrigger value="instances">{t.instanceManagement}</TabsTrigger>
-            <TabsTrigger value="activity">{t.activityHistory}</TabsTrigger>
+        <Tabs defaultValue="users" className="space-y-8">
+          <TabsList className="hologram-card p-1">
+            <TabsTrigger
+              value="users"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-neon-blue data-[state=active]:to-neon-cyan data-[state=active]:text-white"
+            >
+              {t.userManagement}
+            </TabsTrigger>
+            <TabsTrigger
+              value="instances"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-neon-blue data-[state=active]:to-neon-cyan data-[state=active]:text-white"
+            >
+              {t.instanceManagement}
+            </TabsTrigger>
+            <TabsTrigger
+              value="activity"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-neon-blue data-[state=active]:to-neon-cyan data-[state=active]:text-white"
+            >
+              {t.activityHistory}
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle>{t.userManagement}</CardTitle>
-                    <CardDescription>{t.userManagementDesc}</CardDescription>
-                  </div>
-                  <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        {t.createNewUser}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>{t.createNewUser}</DialogTitle>
-                        <DialogDescription>Sisteme yeni bir kullanıcı ekleyin</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="email" className="text-right">
-                            {t.email}
-                          </Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={newUser.email}
-                            onChange={(e) => setNewUser((prev) => ({ ...prev, email: e.target.value }))}
-                            className="col-span-3"
-                            placeholder="kullanici@example.com"
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="password" className="text-right">
-                            {t.password}
-                          </Label>
-                          <Input
-                            id="password"
-                            type="password"
-                            value={newUser.password}
-                            onChange={(e) => setNewUser((prev) => ({ ...prev, password: e.target.value }))}
-                            className="col-span-3"
-                            placeholder={t.strongPassword}
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="fullName" className="text-right">
-                            {t.fullName}
-                          </Label>
-                          <Input
-                            id="fullName"
-                            value={newUser.fullName}
-                            onChange={(e) => setNewUser((prev) => ({ ...prev, fullName: e.target.value }))}
-                            className="col-span-3"
-                            placeholder={t.optional}
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="role" className="text-right">
-                            {t.role}
-                          </Label>
-                          <Select
-                            value={newUser.role}
-                            onValueChange={(value) => setNewUser((prev) => ({ ...prev, role: value }))}
-                          >
-                            <SelectTrigger className="w-24">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">{t.regularUser}</SelectItem>
-                              <SelectItem value="admin">{t.adminUser}</SelectItem>
-                              <SelectItem value="suspended">{t.suspendedUser}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="submit" onClick={handleCreateUser}>
-                          {t.create}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+          <TabsContent value="users" className="space-y-6">
+            <div className="hologram-card p-8 rounded-3xl">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-3xl font-bold neon-text mb-2">{t.userManagement}</h2>
+                  <p className="text-muted-foreground">{t.userManagementDesc}</p>
                 </div>
-              </CardHeader>
-              <CardContent>
+                <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="tech-button">
+                      <UserPlus className="h-5 w-5 mr-2" />
+                      {t.createNewUser}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="hologram-card border-0">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl neon-text">{t.createNewUser}</DialogTitle>
+                      <DialogDescription>Sisteme yeni bir kullanıcı ekleyin</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="email" className="text-right">
+                          {t.email}
+                        </Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={newUser.email}
+                          onChange={(e) => setNewUser((prev) => ({ ...prev, email: e.target.value }))}
+                          className="col-span-3"
+                          placeholder="kullanici@example.com"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="password" className="text-right">
+                          {t.password}
+                        </Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          value={newUser.password}
+                          onChange={(e) => setNewUser((prev) => ({ ...prev, password: e.target.value }))}
+                          className="col-span-3"
+                          placeholder={t.strongPassword}
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="fullName" className="text-right">
+                          {t.fullName}
+                        </Label>
+                        <Input
+                          id="fullName"
+                          value={newUser.fullName}
+                          onChange={(e) => setNewUser((prev) => ({ ...prev, fullName: e.target.value }))}
+                          className="col-span-3"
+                          placeholder={t.optional}
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="role" className="text-right">
+                          {t.role}
+                        </Label>
+                        <Select
+                          value={newUser.role}
+                          onValueChange={(value) => setNewUser((prev) => ({ ...prev, role: value }))}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">{t.regularUser}</SelectItem>
+                            <SelectItem value="admin">{t.adminUser}</SelectItem>
+                            <SelectItem value="suspended">{t.suspendedUser}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" onClick={handleCreateUser}>
+                        {t.create}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>{t.email}</TableHead>
-                      <TableHead>{t.fullName}</TableHead>
-                      <TableHead>{t.role}</TableHead>
-                      <TableHead>{t.registrationDate}</TableHead>
-                      <TableHead>{t.instanceCount}</TableHead>
-                      <TableHead>{t.actions}</TableHead>
+                    <TableRow className="border-border/50">
+                      <TableHead className="text-muted-foreground">{t.email}</TableHead>
+                      <TableHead className="text-muted-foreground">{t.fullName}</TableHead>
+                      <TableHead className="text-muted-foreground">Telefon</TableHead>
+                      <TableHead className="text-muted-foreground">Şirket</TableHead>
+                      <TableHead className="text-muted-foreground">{t.role}</TableHead>
+                      <TableHead className="text-muted-foreground">{t.registrationDate}</TableHead>
+                      <TableHead className="text-muted-foreground">{t.instanceCount}</TableHead>
+                      <TableHead className="text-muted-foreground">{t.actions}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredUsers.map((user) => {
                       const userInstanceCount = selectedInstances.filter((i) => i.user_id === user.id).length
                       return (
-                        <TableRow key={user.id}>
+                        <TableRow key={user.id} className="border-border/30 hover:bg-muted/5">
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
-                              <Mail className="h-4 w-4 text-gray-400" />
-                              {user.email}
+                              <Mail className="h-4 w-4 text-neon-cyan" />
+                              <span className="text-foreground">{user.email}</span>
                             </div>
                           </TableCell>
-                          <TableCell>{user.full_name || "Belirtilmemiş"}</TableCell>
+                          <TableCell className="text-foreground">{user.full_name || "—"}</TableCell>
+                          <TableCell className="text-foreground">
+                            {user.phone ? (
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                {user.phone}
+                              </div>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell className="text-foreground">
+                            {user.company_name ? (
+                              <div className="flex items-center gap-2">
+                                <Building className="h-4 w-4 text-muted-foreground" />
+                                {user.company_name}
+                              </div>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
                           <TableCell>{getRoleBadge(user.role)}</TableCell>
-                          <TableCell>{new Date(user.created_at).toLocaleDateString("tr-TR")}</TableCell>
+                          <TableCell className="text-foreground">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              {new Date(user.created_at).toLocaleDateString("tr-TR")}
+                            </div>
+                          </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{userInstanceCount}</Badge>
+                            <Badge variant="outline" className="border-neon-cyan/30 text-neon-cyan">
+                              {userInstanceCount}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setViewingUser(user)
+                                  setIsViewUserOpen(true)
+                                }}
+                                className="border-neon-blue/30 hover:bg-neon-blue/10"
+                              >
+                                <Search className="h-4 w-4" />
+                              </Button>
                               <Select value={user.role} onValueChange={(value) => handleRoleChange(user.id, value)}>
-                                <SelectTrigger className="w-24">
+                                <SelectTrigger className="w-32 border-border/50">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="hologram-card border-0">
                                   <SelectItem value="user">{t.regularUser}</SelectItem>
                                   <SelectItem value="admin">{t.adminUser}</SelectItem>
                                   <SelectItem value="suspended">{t.suspendedUser}</SelectItem>
@@ -613,10 +697,9 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  setEditingUser(user)
-                                  setIsEditUserOpen(true)
-                                }}
+                                onClick={() => handleEditUser(user.id)}
+                                className="border-neon-cyan/30 hover:bg-neon-cyan/10"
+                                title="Yeni sekmede düzenle"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -627,6 +710,7 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
                                     size="sm"
                                     onClick={() => handleForceLogoutUser(user.id, user.email)}
                                     title="Tüm oturumları sonlandır"
+                                    className="border-yellow-500/30 hover:bg-yellow-500/10"
                                   >
                                     <Shield className="h-4 w-4" />
                                   </Button>
@@ -636,14 +720,16 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
                                       size="sm"
                                       onClick={() => handleSuspendUser(user.id, user.email)}
                                       title="Kullanıcıyı askıya al"
+                                      className="border-orange-500/30 hover:bg-orange-500/10"
                                     >
                                       <AlertTriangle className="h-4 w-4" />
                                     </Button>
                                   )}
                                   <Button
-                                    variant="destructive"
+                                    variant="outline"
                                     size="sm"
                                     onClick={() => handleDeleteUser(user.id, user.email)}
+                                    className="border-red-500/30 hover:bg-red-500/10 text-red-500"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -656,52 +742,60 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
                     })}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
 
-          <TabsContent value="instances" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t.instanceManagement}</CardTitle>
-                <CardDescription>{t.instanceManagementDesc}</CardDescription>
-              </CardHeader>
-              <CardContent>
+          <TabsContent value="instances" className="space-y-6">
+            <div className="hologram-card p-8 rounded-3xl">
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold neon-text mb-2">{t.instanceManagement}</h2>
+                <p className="text-muted-foreground">{t.instanceManagementDesc}</p>
+              </div>
+
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>{t.instanceName}</TableHead>
-                      <TableHead>{t.instanceOwner}</TableHead>
-                      <TableHead>{t.status}</TableHead>
-                      <TableHead>{t.workflowName}</TableHead>
-                      <TableHead>{t.createdAt}</TableHead>
-                      <TableHead>{t.actions}</TableHead>
+                    <TableRow className="border-border/50">
+                      <TableHead className="text-muted-foreground">{t.instanceName}</TableHead>
+                      <TableHead className="text-muted-foreground">{t.instanceOwner}</TableHead>
+                      <TableHead className="text-muted-foreground">{t.status}</TableHead>
+                      <TableHead className="text-muted-foreground">{t.workflowName}</TableHead>
+                      <TableHead className="text-muted-foreground">{t.createdAt}</TableHead>
+                      <TableHead className="text-muted-foreground">{t.actions}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredInstances.map((instance) => (
-                      <TableRow key={instance.id}>
+                      <TableRow key={instance.id} className="border-border/30 hover:bg-muted/5">
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
-                            <Server className="h-4 w-4 text-gray-400" />
-                            {instance.instance_name}
+                            <Server className="h-4 w-4 text-neon-blue" />
+                            <span className="text-foreground">{instance.instance_name}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4 text-gray-400" />
-                            {instance.user_email || "Bilinmiyor"}
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-foreground">{instance.user_email || "Bilinmiyor"}</span>
                           </div>
                         </TableCell>
                         <TableCell>{getStatusBadge(instance.status)}</TableCell>
                         <TableCell>
                           {instance.workflow_name ? (
-                            <Badge variant="outline">{instance.workflow_name}</Badge>
+                            <Badge variant="outline" className="border-neon-cyan/30 text-neon-cyan">
+                              {instance.workflow_name}
+                            </Badge>
                           ) : (
-                            <span className="text-gray-400">Oluşturulmamış</span>
+                            <span className="text-muted-foreground">Oluşturulmamış</span>
                           )}
                         </TableCell>
-                        <TableCell>{new Date(instance.created_at).toLocaleDateString("tr-TR")}</TableCell>
+                        <TableCell className="text-foreground">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            {new Date(instance.created_at).toLocaleDateString("tr-TR")}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {instance.status === "open" && (
@@ -710,14 +804,16 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
                                 size="sm"
                                 onClick={() => handleForceDisconnectInstance(instance.id, instance.instance_name)}
                                 title="Bağlantıyı zorla kes"
+                                className="border-orange-500/30 hover:bg-orange-500/10"
                               >
                                 <AlertTriangle className="h-4 w-4" />
                               </Button>
                             )}
                             <Button
-                              variant="destructive"
+                              variant="outline"
                               size="sm"
                               onClick={() => handleDeleteInstance(instance.id, instance.instance_name)}
+                              className="border-red-500/30 hover:bg-red-500/10 text-red-500"
                             >
                               <Trash2 className="h-4 w-4 mr-1" />
                               {t.delete}
@@ -728,67 +824,120 @@ export function AdminDashboard({ users, instances, currentUser }: AdminDashboard
                     ))}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
 
-          <TabsContent value="activity" className="space-y-4">
+          <TabsContent value="activity" className="space-y-6">
             <AdminActivityMonitor />
           </TabsContent>
         </Tabs>
 
-        {/* Edit User Dialog */}
-        <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
-          <DialogContent>
+        <Dialog open={isViewUserOpen} onOpenChange={setIsViewUserOpen}>
+          <DialogContent className="hologram-card border-0 max-w-3xl">
             <DialogHeader>
-              <DialogTitle>{t.editUser}</DialogTitle>
-              <DialogDescription>{t.editUserDesc}</DialogDescription>
+              <DialogTitle className="text-2xl neon-text">Kullanıcı Detayları</DialogTitle>
+              <DialogDescription>Kullanıcının tüm profil bilgilerini görüntüleyin</DialogDescription>
             </DialogHeader>
-            {editingUser && (
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-email" className="text-right">
-                    {t.email}
-                  </Label>
-                  <Input id="edit-email" value={editingUser.email} disabled className="col-span-3 bg-gray-100" />
+            {viewingUser && (
+              <div className="grid gap-6 py-4">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </Label>
+                    <div className="text-foreground font-medium">{viewingUser.email}</div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Ad Soyad</Label>
+                    <div className="text-foreground font-medium">{viewingUser.full_name || "—"}</div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-fullName" className="text-right">
-                    {t.fullName}
-                  </Label>
-                  <Input
-                    id="edit-fullName"
-                    value={editingUser.full_name || ""}
-                    onChange={(e) => setEditingUser((prev) => (prev ? { ...prev, full_name: e.target.value } : null))}
-                    className="col-span-3"
-                    placeholder="Ad Soyad"
-                  />
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Telefon
+                    </Label>
+                    <div className="text-foreground font-medium">{viewingUser.phone || "—"}</div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Kullanıcı Adı</Label>
+                    <div className="text-foreground font-medium">{viewingUser.username || "—"}</div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-role" className="text-right">
-                    {t.role}
+
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Adres
                   </Label>
-                  <Select
-                    value={editingUser.role}
-                    onValueChange={(value) => setEditingUser((prev) => (prev ? { ...prev, role: value } : null))}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">{t.regularUser}</SelectItem>
-                      <SelectItem value="admin">{t.adminUser}</SelectItem>
-                      <SelectItem value="suspended">{t.suspendedUser}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="text-foreground font-medium">{viewingUser.address || "—"}</div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">İl</Label>
+                    <div className="text-foreground font-medium">{viewingUser.city || "—"}</div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">İlçe</Label>
+                    <div className="text-foreground font-medium">{viewingUser.district || "—"}</div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/30 pt-6 mt-4">
+                  <h3 className="text-lg font-bold neon-text mb-4 flex items-center gap-2">
+                    <Building className="h-5 w-5" />
+                    Şirket Bilgileri
+                  </h3>
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Şirket Adı</Label>
+                      <div className="text-foreground font-medium">{viewingUser.company_name || "—"}</div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Şirket Adresi</Label>
+                      <div className="text-foreground font-medium">{viewingUser.company_address || "—"}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-muted-foreground">Vergi Numarası</Label>
+                        <div className="text-foreground font-medium">{viewingUser.company_tax_number || "—"}</div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-muted-foreground">Website</Label>
+                        <div className="text-foreground font-medium">{viewingUser.company_website || "—"}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/30 pt-6 mt-4">
+                  <div className="grid grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Hesap Tipi</Label>
+                      <div className="text-foreground font-medium">{viewingUser.account_type || "—"}</div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Rol</Label>
+                      <div>{getRoleBadge(viewingUser.role)}</div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Kayıt Tarihi
+                      </Label>
+                      <div className="text-foreground font-medium">
+                        {new Date(viewingUser.created_at).toLocaleDateString("tr-TR")}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
-            <DialogFooter>
-              <Button type="submit" onClick={handleEditUser}>
-                {t.save}
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </main>
