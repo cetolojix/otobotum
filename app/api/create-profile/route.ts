@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { initializeTrialForNewUser } from "@/lib/subscription-utils"
 
 // Create a Supabase client with service role key to bypass RLS
 const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -106,6 +107,16 @@ export async function POST(request: NextRequest) {
       }
 
       console.log("[v0] New profile created successfully:", newProfile)
+
+      try {
+        console.log("[v0] Initializing trial for new user:", newProfile.id)
+        await initializeTrialForNewUser(newProfile.id)
+        console.log("[v0] Trial initialized successfully")
+      } catch (trialError) {
+        console.error("[v0] Error initializing trial:", trialError)
+        // Don't fail the request if trial creation fails
+      }
+
       return NextResponse.json({
         success: true,
         profile: newProfile,
@@ -127,6 +138,16 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[v0] Profile created successfully via API:", profile)
+
+    try {
+      console.log("[v0] Initializing trial for new user:", profile.id)
+      await initializeTrialForNewUser(profile.id)
+      console.log("[v0] Trial initialized successfully")
+    } catch (trialError) {
+      console.error("[v0] Error initializing trial:", trialError)
+      // Don't fail the request if trial creation fails
+    }
+
     return NextResponse.json({
       success: true,
       profile,

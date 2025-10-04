@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { getUserProfile } from "@/lib/auth"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 export interface SubscriptionStatus {
   hasAccess: boolean
@@ -105,19 +106,35 @@ export async function checkSubscriptionAccess(): Promise<SubscriptionStatus> {
 }
 
 export async function initializeTrialForNewUser(userId: string) {
-  const supabase = await createClient()
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    },
+  )
 
   // Check if trial already exists
-  const { data: existingTrial } = await supabase.from("trial_periods").select("*").eq("user_id", userId).maybeSingle()
+  const { data: existingTrial } = await supabaseAdmin
+    .from("trial_periods")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle()
 
   if (existingTrial) {
+    console.log("[v0] Trial already exists for user:", userId)
     return existingTrial
   }
 
   const trialEndDate = new Date()
   trialEndDate.setDate(trialEndDate.getDate() + 7)
 
-  const { data: trial, error } = await supabase
+  console.log("[v0] Creating trial period for user:", userId, "ending at:", trialEndDate)
+
+  const { data: trial, error } = await supabaseAdmin
     .from("trial_periods")
     .insert({
       user_id: userId,
@@ -130,20 +147,21 @@ export async function initializeTrialForNewUser(userId: string) {
 
   if (error) {
     console.error("[v0] Error creating trial period:", error)
-    return null
+    throw error
   }
 
-  const { data: starterPackage } = await supabase.from("packages").select("id").eq("name", "starter").single()
+  console.log("[v0] Trial period created successfully:", trial)
+
+  const { data: starterPackage } = await supabaseAdmin.from("packages").select("id").eq("name", "basic").maybeSingle()
 
   if (starterPackage) {
-    await supabase.from("user_subscriptions").upsert({
+    console.log("[v0] Assigning basic package to user:", userId)
+    await supabaseAdmin.from("user_packages").upsert({
       user_id: userId,
       package_id: starterPackage.id,
-      status: "active",
-      trial_start: new Date().toISOString(),
-      trial_end: trialEndDate.toISOString(),
-      current_period_start: new Date().toISOString(),
-      current_period_end: trialEndDate.toISOString(),
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
   }
 

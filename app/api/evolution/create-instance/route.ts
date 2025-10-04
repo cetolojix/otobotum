@@ -47,6 +47,18 @@ export async function POST(request: NextRequest) {
 
     debugLog("[v0] Authenticated user:", user.id)
 
+    const { data: existingInstances, error: instanceCheckError } = await supabase
+      .from("instances")
+      .select("id")
+      .eq("user_id", user.id)
+
+    if (instanceCheckError) {
+      debugLog("[v0] Error checking existing instances:", instanceCheckError)
+    }
+
+    const isFirstInstance = !existingInstances || existingInstances.length === 0
+    debugLog("[v0] Is first instance:", isFirstInstance)
+
     const { data: limitCheck, error: limitError } = await supabase.rpc("check_instance_limit", { user_uuid: user.id })
 
     if (limitError) {
@@ -215,6 +227,25 @@ export async function POST(request: NextRequest) {
                 // Don't fail the request if database save fails, but log it
               } else {
                 debugLog("[v0] Instance successfully saved to database")
+
+                if (isFirstInstance) {
+                  debugLog("[v0] Starting trial period for first instance")
+                  const trialEndDate = new Date()
+                  trialEndDate.setDate(trialEndDate.getDate() + 7)
+
+                  const { error: trialError } = await supabase.from("trial_periods").insert({
+                    user_id: user.id,
+                    started_at: new Date().toISOString(),
+                    ends_at: trialEndDate.toISOString(),
+                    is_active: true,
+                  })
+
+                  if (trialError) {
+                    debugLog("[v0] Error creating trial period:", trialError)
+                  } else {
+                    debugLog("[v0] Trial period successfully created")
+                  }
+                }
               }
             } catch (dbErr) {
               debugLog("[v0] Failed to save instance to database:", dbErr)

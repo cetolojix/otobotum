@@ -15,6 +15,7 @@ import { FeatureShowcase } from "@/components/feature-showcase"
 import { ProgressSteps } from "@/components/progress-steps"
 import { PackageManagement } from "@/components/package-management"
 import { InstanceLimitWarning } from "@/components/instance-limit-warning"
+import { TrialCountdown } from "@/components/trial-countdown"
 import { getTranslation, type Translations } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -231,6 +232,7 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
+              <TrialCountdown language={language} />
               <span className="text-muted-foreground font-medium hidden md:block">
                 Hoş geldiniz, <span className="text-neon-cyan">{profile?.full_name || user.email}</span>
               </span>
