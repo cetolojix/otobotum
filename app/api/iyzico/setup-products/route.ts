@@ -3,33 +3,45 @@ import { createClient } from "@/lib/supabase/server"
 
 export const runtime = "nodejs"
 
-const IYZICO_BASE_URL = process.env.IYZICO_BASE_URL || "https://sandbox-api.iyzipay.com"
+const IYZICO_BASE_URL = process.env.IYZICO_BASE_URL || "https://api.iyzipay.com"
 
-async function generateAuthString(apiKey: string, secretKey: string, randomString: string, body: string) {
+async function hmacSha256(key: string, message: string): Promise<string> {
   const crypto = await import("crypto")
+  const hmac = crypto.createHmac("sha256", key)
+  hmac.update(message)
+  return hmac.digest("hex")
+}
 
-  const authHeader = `IYZWSv2 ${Buffer.from(`${apiKey}:${secretKey}`).toString("base64")}`
+async function generateRandomString(): Promise<string> {
+  const crypto = await import("crypto")
+  return crypto.randomBytes(16).toString("hex")
+}
 
-  // Generate HMAC-SHA256 signature
-  const hmac = crypto.createHmac("sha256", secretKey)
-  hmac.update(randomString + body)
-  const signature = hmac.digest("hex")
+async function generateAuthHeader(
+  apiKey: string,
+  secretKey: string,
+  uri: string,
+  body: object,
+  randomString: string,
+): Promise<string> {
+  const bodyString = JSON.stringify(body)
+  const dataToSign = randomString + uri + bodyString
 
-  return {
-    authorization: authHeader,
-    randomString,
-    signature,
-  }
+  const signatureHex = await hmacSha256(secretKey, dataToSign)
+
+  const authorizationParams = [`apiKey:${apiKey}`, `randomKey:${randomString}`, `signature:${signatureHex}`].join("&")
+
+  const base64Auth = Buffer.from(authorizationParams).toString("base64")
+
+  return `IYZWSv2 ${base64Auth}`
 }
 
 async function makeIyzicoRequest(endpoint: string, body: any) {
   const apiKey = process.env.IYZICO_API_KEY!
   const secretKey = process.env.IYZICO_SECRET_KEY!
 
-  const randomString = Math.random().toString(36).substring(2, 15)
-  const bodyString = JSON.stringify(body)
-
-  const auth = await generateAuthString(apiKey, secretKey, randomString, bodyString)
+  const randomString = await generateRandomString()
+  const authHeader = await generateAuthHeader(apiKey, secretKey, endpoint, body, randomString)
 
   console.log("[v0] Making iyzico request to:", `${IYZICO_BASE_URL}${endpoint}`)
 
@@ -37,15 +49,18 @@ async function makeIyzicoRequest(endpoint: string, body: any) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: auth.authorization,
-      "x-iyzi-rnd": auth.randomString,
-      "x-iyzi-signature": auth.signature,
+      Authorization: authHeader,
+      "x-iyzi-rnd": randomString,
+      "x-iyzi-client-version": "iyzipay-node-2.0.64",
     },
-    body: bodyString,
+    body: JSON.stringify(body),
   })
 
   const result = await response.json()
-  console.log("[v0] Iyzico response:", result)
+  console.log("[v0] Iyzico response status:", result.status)
+  if (result.status !== "success") {
+    console.error("[v0] Iyzico error:", result.errorMessage, result.errorCode)
+  }
   return result
 }
 
@@ -105,9 +120,8 @@ export async function POST(request: NextRequest) {
         console.log(`[v0] Creating product for: ${pkg.name}`)
         const productResult = await makeIyzicoRequest("/v2/subscription/products", {
           locale: "tr",
-          name: pkg.name,
+          name: `${pkg.name}-${Date.now()}`, // Unique name için timestamp eklendi
           description: pkg.display_name_tr || `${pkg.name} paketi`,
-          conversationId: `product-${pkg.id}`,
         })
 
         if (productResult.status !== "success" || !productResult.data?.referenceCode) {
@@ -123,13 +137,12 @@ export async function POST(request: NextRequest) {
           const monthlyPlanResult = await makeIyzicoRequest("/v2/subscription/pricing-plans", {
             locale: "tr",
             productReferenceCode,
-            name: `${pkg.name}-monthly`,
+            name: `${pkg.name}-monthly-${Date.now()}`,
             price: (pkg.price_monthly / 100).toFixed(2),
             currencyCode: "TRY",
             paymentInterval: "MONTHLY",
             paymentIntervalCount: 1,
             planPaymentType: "RECURRING",
-            conversationId: `plan-monthly-${pkg.id}`,
           })
 
           if (monthlyPlanResult.status !== "success" || !monthlyPlanResult.data?.referenceCode) {
@@ -146,13 +159,12 @@ export async function POST(request: NextRequest) {
           const yearlyPlanResult = await makeIyzicoRequest("/v2/subscription/pricing-plans", {
             locale: "tr",
             productReferenceCode,
-            name: `${pkg.name}-yearly`,
+            name: `${pkg.name}-yearly-${Date.now()}`,
             price: (pkg.price_yearly / 100).toFixed(2),
             currencyCode: "TRY",
             paymentInterval: "YEARLY",
             paymentIntervalCount: 1,
             planPaymentType: "RECURRING",
-            conversationId: `plan-yearly-${pkg.id}`,
           })
 
           if (yearlyPlanResult.status !== "success" || !yearlyPlanResult.data?.referenceCode) {
@@ -181,12 +193,12 @@ export async function POST(request: NextRequest) {
         results.push({
           package: pkg.name,
           success: true,
-          productCode: productReferenceCode,
+          productReferenceCode,
           monthlyPlanCode,
           yearlyPlanCode,
         })
       } catch (error) {
-        console.error("[v0] Error processing package:", error)
+        console.error(`[v0] Error processing package ${pkg.name}:`, error)
         results.push({
           package: pkg.name,
           success: false,
