@@ -58,8 +58,9 @@ export function SubscriptionCard({ pkg, language, isCurrentPackage, billingCycle
   }
 
   const displayName = language === "tr" ? pkg.display_name_tr : pkg.display_name_en
-  const price = billingCycle === "yearly" ? pkg.price_yearly : pkg.price_monthly
-  const monthlyPrice = billingCycle === "yearly" ? (pkg.price_yearly / 12).toFixed(2) : pkg.price_monthly
+  const price = billingCycle === "yearly" ? pkg.price_yearly / 100 : pkg.price_monthly / 100
+  const monthlyPrice =
+    billingCycle === "yearly" ? (pkg.price_yearly / 12 / 100).toFixed(2) : (pkg.price_monthly / 100).toFixed(2)
 
   const handleSubscribe = async () => {
     if (isCurrentPackage || loading) return
@@ -123,11 +124,12 @@ export function SubscriptionCard({ pkg, language, isCurrentPackage, billingCycle
             <div className="text-4xl font-bold">{language === "tr" ? "Ücretsiz" : "Free"}</div>
           ) : (
             <>
-              <div className="text-4xl font-bold">₺{price}</div>
+              <div className="text-4xl font-bold">₺{price.toFixed(2).replace(".", ",")}</div>
               <div className="text-sm text-muted-foreground">
                 {billingCycle === "yearly" ? (
                   <>
-                    {language === "tr" ? "yıllık" : "per year"} • ₺{monthlyPrice}/{language === "tr" ? "ay" : "mo"}
+                    {language === "tr" ? "yıllık" : "per year"} • ₺{monthlyPrice.replace(".", ",")}/
+                    {language === "tr" ? "ay" : "mo"}
                   </>
                 ) : (
                   <>{language === "tr" ? "aylık" : "per month"}</>

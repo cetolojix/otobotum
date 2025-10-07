@@ -53,7 +53,7 @@
     "embla-carousel-react": "latest",
     "geist": "latest",
     "input-otp": "latest",
-    "iyzipay": "latest",
+    "iyzipay": "2.0.64",
     "lucide-react": "^0.454.0",
     "next": "14.2.16",
     "next-themes": "latest",

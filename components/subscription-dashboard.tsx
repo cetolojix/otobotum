@@ -211,7 +211,8 @@ export function SubscriptionDashboard({ language = "tr" }: SubscriptionDashboard
               <div>
                 <CardTitle>{displayName}</CardTitle>
                 <CardDescription>
-                  {subscription.packages.max_instances} WhatsApp Bot • {subscription.packages.price_monthly} TL/ay
+                  {subscription.packages.max_instances} WhatsApp Bot • ₺
+                  {(subscription.packages.price_monthly / 100).toFixed(2).replace(".", ",")} /ay
                 </CardDescription>
               </div>
             </div>

@@ -59,7 +59,18 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
       console.log("[v0] Packages response:", { status: response.status, data })
 
       if (response.ok) {
-        setPackages(data.packages)
+        console.log("[v0] Setting packages, count:", data.packages.length)
+        const allowedPackages = ["basic", "plus", "pro", "custom"]
+        const filteredPackages = data.packages.filter((pkg: Package) => allowedPackages.includes(pkg.name))
+
+        const sortedPackages = filteredPackages.sort((a: Package, b: Package) => {
+          // Custom paketi en sona koy
+          if (a.name === "custom") return 1
+          if (b.name === "custom") return -1
+          // Diğerlerini fiyata göre sırala
+          return a.price_monthly - b.price_monthly
+        })
+        setPackages(sortedPackages)
       } else {
         const errorMsg = data.error || "Paketler yüklenirken hata oluştu"
         console.log("[v0] Packages fetch error:", errorMsg)
@@ -229,11 +240,18 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {packages.map((pkg) => {
           const isCurrentPackage = currentPackage?.package_name === pkg.name
           const isUpgrading = upgrading === pkg.name
           const displayName = language === "tr" ? pkg.display_name_tr : pkg.display_name_en
+
+          const priceDisplay =
+            pkg.price_monthly === 0 || pkg.name === "custom"
+              ? language === "tr"
+                ? "Görüşmeli"
+                : "Contact Us"
+              : `₺${(pkg.price_monthly / 100).toFixed(2).replace(".", ",")}`
 
           let features: string[] = []
           if (pkg.features) {
@@ -247,7 +265,7 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
           return (
             <Card
               key={pkg.id}
-              className={`relative transition-all duration-200 ${
+              className={`relative transition-all duration-200 flex flex-col ${
                 isCurrentPackage ? "border-primary bg-primary/5 shadow-md" : getPackageColor(pkg.name)
               }`}
             >
@@ -260,24 +278,18 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
                 </div>
               )}
 
-              <CardHeader className="text-center">
+              <CardHeader className="text-center pb-4">
                 <div className="flex justify-center mb-2">{getPackageIcon(pkg.name)}</div>
                 <CardTitle className="text-xl">{displayName}</CardTitle>
                 <CardDescription>
-                  <span className="text-2xl font-bold">
-                    {pkg.price_monthly === 0 || pkg.name === "custom"
-                      ? language === "tr"
-                        ? "Görüşmeli"
-                        : "Contact Us"
-                      : `₺${pkg.price_monthly.toLocaleString("tr-TR")}`}
-                  </span>
+                  <span className="text-2xl font-bold">{priceDisplay}</span>
                   {pkg.price_monthly > 0 && pkg.name !== "custom" && (
                     <span className="text-sm text-muted-foreground">/{language === "tr" ? "ay" : "month"}</span>
                   )}
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 flex-1 flex flex-col">
                 <div className="text-center">
                   <div className="text-lg font-semibold">
                     {pkg.max_instances >= 999 || pkg.name === "custom"
@@ -288,7 +300,7 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
                   </div>
                 </div>
 
-                <ul className="space-y-2 text-sm">
+                <ul className="space-y-2 text-sm flex-1">
                   {features.map((feature: string, index: number) => (
                     <li key={index} className="flex items-start gap-2">
                       <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
@@ -300,7 +312,7 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
                 <Button
                   onClick={() => handleUpgrade(pkg.name)}
                   disabled={isCurrentPackage || isUpgrading || pkg.name === "custom"}
-                  className="w-full"
+                  className="w-full mt-auto"
                   variant={isCurrentPackage ? "secondary" : pkg.name === "custom" ? "outline" : "default"}
                 >
                   {isUpgrading ? (

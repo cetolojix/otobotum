@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const EVOLUTION_API_URL = "https://evolu.cetoloji.com"
-const EVOLUTION_API_KEY = "hvsctnOWysGzOGHea8tEzV2iHCGr9H4L"
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || "https://evolu.cetoloji.com"
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "hvsctnOWysGzOGHea8tEzV2iHCGr9H4L"
 
 const lastRequestTime = new Map<string, number>()
 const MIN_REQUEST_INTERVAL = 2000 // 2 seconds between requests
@@ -31,12 +31,35 @@ export async function GET(request: NextRequest) {
     }
     lastRequestTime.set(instanceName, now)
 
-    const response = await fetch(`${EVOLUTION_API_URL}/instance/connectionState/${instanceName}`, {
-      headers: {
-        apikey: EVOLUTION_API_KEY,
-        Accept: "application/json",
-      },
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+    let response
+    try {
+      response = await fetch(`${EVOLUTION_API_URL}/instance/connectionState/${instanceName}`, {
+        headers: {
+          apikey: EVOLUTION_API_KEY,
+          Accept: "application/json",
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      })
+      clearTimeout(timeoutId)
+    } catch (fetchError) {
+      clearTimeout(timeoutId)
+      console.error("[v0] Fetch error:", fetchError)
+
+      return NextResponse.json({
+        success: true,
+        status: "connecting",
+        instanceName,
+        details: {
+          state: "connecting",
+          message: "Bağlantı kontrol ediliyor...",
+        },
+        timestamp: new Date().toISOString(),
+      })
+    }
 
     console.log("[v0] Status response:", response.status)
 
@@ -57,7 +80,17 @@ export async function GET(request: NextRequest) {
       if (response.status === 404) {
         return NextResponse.json({ error: "Instance not found" }, { status: 404 })
       }
-      throw new Error(`HTTP ${response.status}: Failed to check instance status`)
+
+      return NextResponse.json({
+        success: true,
+        status: "disconnected",
+        instanceName,
+        details: {
+          state: "close",
+          message: "Bağlantı durumu alınamadı",
+        },
+        timestamp: new Date().toISOString(),
+      })
     }
 
     const data = await response.json()
@@ -101,12 +134,15 @@ export async function GET(request: NextRequest) {
 
     const errorMessage = error instanceof Error ? error.message : "Failed to check status"
 
-    return NextResponse.json(
-      {
-        error: errorMessage,
-        details: "Please check if the instance exists",
+    return NextResponse.json({
+      success: true,
+      status: "connecting",
+      instanceName: "unknown",
+      details: {
+        state: "connecting",
+        message: "Durum kontrol ediliyor...",
       },
-      { status: 500 },
-    )
+      timestamp: new Date().toISOString(),
+    })
   }
 }

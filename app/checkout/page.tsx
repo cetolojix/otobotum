@@ -18,7 +18,10 @@ interface Package {
   max_instances: number
   price_monthly: number
   price_yearly: number
-  features: string[]
+  features: {
+    en: string[]
+    tr: string[]
+  }
 }
 
 function CheckoutContent() {
@@ -81,7 +84,24 @@ function CheckoutContent() {
         }),
       })
 
-      const data = await response.json()
+      const responseClone = response.clone()
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        console.error("[v0] Failed to parse response as JSON:", jsonError)
+        try {
+          const text = await responseClone.text()
+          console.error("[v0] Response text:", text)
+          setError(`Sunucu hatası: ${text.substring(0, 200)}`)
+        } catch (textError) {
+          console.error("[v0] Failed to read response text:", textError)
+          setError("Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.")
+        }
+        setProcessing(false)
+        return
+      }
 
       console.log("[v0] Checkout response:", { status: response.status, data })
 
@@ -98,7 +118,7 @@ function CheckoutContent() {
         } else if (data.iyzicoError) {
           setError(`iyzico Hatası: ${data.error} (Kod: ${data.iyzicoError})`)
         } else {
-          setError(data.error || "Abonelik başlatılamadı")
+          setError(data.error || data.details || "Abonelik başlatılamadı")
         }
         setProcessing(false)
       }
@@ -141,6 +161,7 @@ function CheckoutContent() {
   const price = billingCycle === "yearly" ? pkg.price_yearly : pkg.price_monthly
   const monthlyPrice = billingCycle === "yearly" ? (pkg.price_yearly / 12).toFixed(2) : pkg.price_monthly
   const displayName = language === "tr" ? pkg.display_name_tr : pkg.display_name_en
+  const features = pkg.features[language] || pkg.features.tr || []
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-5xl">
@@ -171,9 +192,11 @@ function CheckoutContent() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-xl">₺{price}</div>
+                    <div className="font-bold text-xl">₺{(price / 100).toFixed(2).replace(".", ",")}</div>
                     {billingCycle === "yearly" && (
-                      <div className="text-xs text-muted-foreground">₺{monthlyPrice}/ay</div>
+                      <div className="text-xs text-muted-foreground">
+                        ₺{(Number.parseFloat(monthlyPrice) / 100).toFixed(2).replace(".", ",")}/ay
+                      </div>
                     )}
                   </div>
                 </div>
@@ -184,7 +207,7 @@ function CheckoutContent() {
               <div className="space-y-2">
                 <div className="text-sm font-medium">Paket Özellikleri:</div>
                 <ul className="space-y-1">
-                  {pkg.features.map((feature, index) => (
+                  {features.map((feature, index) => (
                     <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
                       <span className="text-green-500">✓</span>
                       {feature}
@@ -197,7 +220,7 @@ function CheckoutContent() {
 
               <div className="flex justify-between items-center text-lg font-bold">
                 <span>Toplam</span>
-                <span>₺{price}</span>
+                <span>₺{(price / 100).toFixed(2).replace(".", ",")}</span>
               </div>
 
               {billingCycle === "yearly" && (

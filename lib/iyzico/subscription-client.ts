@@ -1,6 +1,6 @@
 // iyzico Subscription API Client
 // Implements iyzico's native subscription system
-import crypto from "crypto"
+import { crypto } from "crypto"
 
 interface IyzicoConfig {
   apiKey: string
@@ -115,10 +115,20 @@ class IyzicoSubscriptionClient {
     }
   }
 
-  private generateAuthString(url: string, body: string): string {
+  private async generateAuthString(url: string, body: string): Promise<string> {
     const randomString = this.generateRandomString()
     const dataToEncrypt = [randomString, this.config.apiKey, this.config.secretKey, url, body].join("")
-    const hash = crypto.createHmac("sha256", this.config.secretKey).update(dataToEncrypt).digest("base64")
+
+    // Use Web Crypto API for HMAC
+    const encoder = new TextEncoder()
+    const keyData = encoder.encode(this.config.secretKey)
+    const messageData = encoder.encode(dataToEncrypt)
+
+    const cryptoKey = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
+
+    const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData)
+    const hash = btoa(String.fromCharCode(...new Uint8Array(signature)))
+
     return `IYZWS ${this.config.apiKey}:${hash}`
   }
 
@@ -133,11 +143,13 @@ class IyzicoSubscriptionClient {
       console.log("[v0] iyzico request:", url)
       console.log("[v0] iyzico body:", bodyString)
 
+      const authString = await this.generateAuthString(url, bodyString)
+
       const response = await fetch(`${this.config.baseUrl}${url}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: this.generateAuthString(url, bodyString),
+          Authorization: authString,
           "x-iyzi-rnd": this.generateRandomString(),
         },
         body: bodyString,

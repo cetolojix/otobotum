@@ -141,7 +141,7 @@ importers:
         specifier: latest
         version: 1.4.2(react-dom@18.0.0(react@18.0.0))(react@18.0.0)
       iyzipay:
-        specifier: latest
+        specifier: 2.0.64
         version: 2.0.64
       lucide-react:
         specifier: ^0.454.0

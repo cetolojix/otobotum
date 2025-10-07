@@ -66,7 +66,7 @@ export function PackageManagement({ language, packageInfo, onPackageChange }: Pa
                 {language === "tr" ? "Paketi Değiştir" : "Change Package"}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{language === "tr" ? "Paket Seçimi" : "Package Selection"}</DialogTitle>
                 <DialogDescription>

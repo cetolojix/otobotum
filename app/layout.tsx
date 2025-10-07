@@ -6,6 +6,9 @@ import "./globals.css"
 import { Suspense } from "react"
 import Script from "next/script"
 
+const geistSans = GeistSans
+const geistMono = GeistMono
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://cetobot.com"),
   title: {
@@ -151,7 +154,7 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="tr" data-bs-theme="light">
+    <html lang="tr" data-bs-theme="light" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <head>
         <meta name="theme-color" content="#0a0a0a" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
@@ -160,7 +163,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
-      <body className={`${GeistSans.variable} ${GeistMono.variable}`} style={{ fontFamily: "var(--font-geist-sans)" }}>
+      <body className={GeistSans.className}>
         <Script
           src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
           integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
