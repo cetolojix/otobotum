@@ -8,6 +8,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(status)
   } catch (error) {
     console.error("[v0] Error checking access:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Internal server error"
+    return NextResponse.json(
+      {
+        error: errorMessage,
+        hasAccess: false,
+        isInTrial: false,
+        trialDaysLeft: 0,
+        subscription: null,
+        needsUpgrade: true,
+      },
+      { status: 500 },
+    )
   }
 }

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Check, Crown, Zap, Star } from "lucide-react"
+import { Loader2, Check, Crown, Zap, Star, Sparkles } from "lucide-react"
 import { getTranslation } from "@/lib/i18n"
 
 interface Package {
@@ -17,7 +17,7 @@ interface Package {
   max_instances: number
   price_monthly: number
   price_yearly: number
-  features: string[]
+  features: { tr: string[]; en: string[] } | string[]
   is_active: boolean
 }
 
@@ -165,10 +165,13 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
     switch (packageName) {
       case "basic":
         return <Zap className="h-5 w-5" />
+      case "plus":
       case "premium":
         return <Star className="h-5 w-5" />
       case "pro":
         return <Crown className="h-5 w-5" />
+      case "custom":
+        return <Sparkles className="h-5 w-5" />
       default:
         return <Zap className="h-5 w-5" />
     }
@@ -178,10 +181,13 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
     switch (packageName) {
       case "basic":
         return "border-blue-200 bg-blue-50"
+      case "plus":
       case "premium":
         return "border-purple-200 bg-purple-50"
       case "pro":
         return "border-amber-200 bg-amber-50"
+      case "custom":
+        return "border-emerald-200 bg-emerald-50"
       default:
         return "border-gray-200 bg-gray-50"
     }
@@ -223,11 +229,20 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {packages.map((pkg) => {
           const isCurrentPackage = currentPackage?.package_name === pkg.name
           const isUpgrading = upgrading === pkg.name
           const displayName = language === "tr" ? pkg.display_name_tr : pkg.display_name_en
+
+          let features: string[] = []
+          if (pkg.features) {
+            if (typeof pkg.features === "object" && !Array.isArray(pkg.features)) {
+              features = pkg.features[language as "tr" | "en"] || []
+            } else if (Array.isArray(pkg.features)) {
+              features = pkg.features
+            }
+          }
 
           return (
             <Card
@@ -250,9 +265,13 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
                 <CardTitle className="text-xl">{displayName}</CardTitle>
                 <CardDescription>
                   <span className="text-2xl font-bold">
-                    {pkg.price_monthly === 0 ? (language === "tr" ? "Ücretsiz" : "Free") : `$${pkg.price_monthly}`}
+                    {pkg.price_monthly === 0 || pkg.name === "custom"
+                      ? language === "tr"
+                        ? "Görüşmeli"
+                        : "Contact Us"
+                      : `₺${pkg.price_monthly.toLocaleString("tr-TR")}`}
                   </span>
-                  {pkg.price_monthly > 0 && (
+                  {pkg.price_monthly > 0 && pkg.name !== "custom" && (
                     <span className="text-sm text-muted-foreground">/{language === "tr" ? "ay" : "month"}</span>
                   )}
                 </CardDescription>
@@ -261,24 +280,28 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
               <CardContent className="space-y-4">
                 <div className="text-center">
                   <div className="text-lg font-semibold">
-                    {pkg.max_instances} {language === "tr" ? "WhatsApp Bot" : "WhatsApp Bots"}
+                    {pkg.max_instances >= 999 || pkg.name === "custom"
+                      ? language === "tr"
+                        ? "Sınırsız"
+                        : "Unlimited"
+                      : `${pkg.max_instances} ${language === "tr" ? "WhatsApp Bot" : "WhatsApp Bots"}`}
                   </div>
                 </div>
 
                 <ul className="space-y-2 text-sm">
-                  {pkg.features.map((feature, index) => (
-                    <li key={index} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                      <span>{feature}</span>
+                  {features.map((feature: string, index: number) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-left">{feature}</span>
                     </li>
                   ))}
                 </ul>
 
                 <Button
                   onClick={() => handleUpgrade(pkg.name)}
-                  disabled={isCurrentPackage || isUpgrading}
+                  disabled={isCurrentPackage || isUpgrading || pkg.name === "custom"}
                   className="w-full"
-                  variant={isCurrentPackage ? "secondary" : "default"}
+                  variant={isCurrentPackage ? "secondary" : pkg.name === "custom" ? "outline" : "default"}
                 >
                   {isUpgrading ? (
                     <>
@@ -290,6 +313,12 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
                       "Mevcut Paket"
                     ) : (
                       "Current Package"
+                    )
+                  ) : pkg.name === "custom" ? (
+                    language === "tr" ? (
+                      "İletişime Geçin"
+                    ) : (
+                      "Contact Us"
                     )
                   ) : language === "tr" ? (
                     "Bu Paketi Seç"

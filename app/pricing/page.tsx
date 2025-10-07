@@ -5,57 +5,70 @@ import { Footer } from "@/components/footer"
 export default function PricingPage() {
   const plans = [
     {
-      name: "Başlangıç",
-      price: "999 TL",
+      name: "Basic",
+      displayName: "Basic",
+      price: "₺1.999",
+      monthlyLimit: "1.000 kişi",
+      whatsappAccounts: "1 hesap",
       color: "from-neon-blue to-neon-cyan",
       icon: "🟢",
       features: [
-        "Limit: 1.000 kişi / ay",
-        "Sınırsız mesaj (aynı kişilerle)",
-        "1 WhatsApp hattı",
-        "Temel otomasyon (karşılama + hazır yanıt)",
+        "Aylık 1.000 kişi limiti",
+        "1 WhatsApp hesabı",
+        "Standart şablonlar",
+        "Basit AI akışı (sık sorular, sipariş alımı)",
+        "Google Sheet entegrasyonu (tek yönlü)",
       ],
       popular: false,
     },
     {
-      name: "Standart",
-      price: "1.999 TL",
+      name: "Plus",
+      displayName: "Plus",
+      price: "₺2.999",
+      monthlyLimit: "2.500 kişi",
+      whatsappAccounts: "2 hesap",
       color: "from-neon-cyan to-neon-blue",
       icon: "🔵",
       features: [
-        "Limit: 2.000 kişi / ay",
-        "Sınırsız mesaj",
-        "3 WhatsApp hattı",
-        "AI destekli cevaplar",
-        "Raporlama (Excel / PDF)",
+        "Aylık 2.500 kişi limiti",
+        "2 WhatsApp hesabı",
+        "Kısmi özelleştirme (flow düzenleme)",
+        "Orta seviye AI (adres tamamlama, ürün önerisi)",
+        "Google Sheet + Webhook entegrasyonu",
       ],
       popular: true,
     },
     {
-      name: "Profesyonel",
-      price: "4.999 TL",
+      name: "Pro",
+      displayName: "Pro",
+      price: "₺3.999",
+      monthlyLimit: "6.000 kişi",
+      whatsappAccounts: "5 hesap",
       color: "from-neon-purple to-tech-orange",
       icon: "🟣",
       features: [
-        "Limit: 5.000 kişi / ay",
-        "Sınırsız mesaj",
-        "5 WhatsApp hattı",
-        "Gelişmiş AI (bilgi tabanı)",
-        "API & CRM entegrasyonu",
+        "Aylık 6.000 kişi limiti",
+        "5 WhatsApp hesabı",
+        "Tam özelleştirme (flow + mesaj şablonları)",
+        "Gelişmiş AI (niyet algılama, insan devralma, çok dilli)",
+        "API + Mail + CAPI entegrasyonu",
       ],
       popular: false,
     },
     {
-      name: "Kurumsal",
-      price: "Görüşmeli",
+      name: "Custom",
+      displayName: "Görüşmeli (Custom)",
+      price: "Görüşme sonrası teklif",
+      monthlyLimit: "Sınırsız",
+      whatsappAccounts: "Sınırsız",
       color: "from-tech-orange to-neon-purple",
       icon: "🟠",
       features: [
-        "Limit: 10.000+ kişi / ay",
-        "Sınırsız mesaj",
-        "10+ WhatsApp hattı",
-        "Özel sunucu kurulumu",
-        "VIP destek",
+        "Sınırsız kişi limiti",
+        "Sınırsız WhatsApp hesabı",
+        "Tamamen ihtiyaca göre özelleştirme",
+        "Özel AI modeli + özel akışlar",
+        "ERP, CRM, e-ticaret sistemleriyle entegre",
       ],
       popular: false,
     },
@@ -122,9 +135,9 @@ export default function PricingPage() {
                 </div>
 
                 <div>
-                  <h3 className="text-2xl font-bold text-foreground mb-2">{plan.name}</h3>
+                  <h3 className="text-2xl font-bold text-foreground mb-2">{plan.displayName}</h3>
                   <div className="text-4xl font-bold neon-text mb-4">{plan.price}</div>
-                  {plan.price !== "Görüşmeli" && <div className="text-sm text-muted-foreground">/ aylık</div>}
+                  {plan.name !== "Custom" && <div className="text-sm text-muted-foreground">/ aylık</div>}
                 </div>
 
                 <ul className="space-y-3 text-left">
@@ -144,12 +157,12 @@ export default function PricingPage() {
                 </ul>
 
                 <Link
-                  href="/auth/register"
+                  href={plan.name === "Custom" ? "/contact" : "/auth/register"}
                   className={`tech-button w-full inline-flex items-center justify-center px-6 py-4 text-white font-bold rounded-2xl transition-all duration-300 group-hover:shadow-2xl ${
                     plan.popular ? "shadow-neon-cyan/40" : "shadow-neon-blue/30"
                   }`}
                 >
-                  {plan.price === "Görüşmeli" ? "İletişime Geç" : "Başlayın"}
+                  {plan.name === "Custom" ? "İletişime Geç" : "Başlayın"}
                   <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>

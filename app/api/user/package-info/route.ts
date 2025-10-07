@@ -79,7 +79,24 @@ export async function GET(request: NextRequest) {
             .single()
 
           if (!retryError && retryPackageInfo) {
-            return NextResponse.json({ packageInfo: retryPackageInfo })
+            const { data: instances } = await supabase.from("whatsapp_instances").select("id").eq("created_by", user.id)
+
+            const currentInstances = instances?.length || 0
+            const maxInstances = retryPackageInfo.packages?.max_instances || 1
+            const remainingInstances = Math.max(0, maxInstances - currentInstances)
+
+            return NextResponse.json({
+              packageInfo: {
+                user_id: retryPackageInfo.user_id,
+                package_name: retryPackageInfo.packages?.name || "basic",
+                display_name_tr: retryPackageInfo.packages?.display_name_tr || "Temel",
+                display_name_en: retryPackageInfo.packages?.display_name_en || "Basic",
+                max_instances: maxInstances,
+                current_instances: currentInstances,
+                remaining_instances: remainingInstances,
+                subscription_status: retryPackageInfo.subscription_status || "active",
+              },
+            })
           }
         }
       }
@@ -87,7 +104,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to assign basic package" }, { status: 500 })
     }
 
-    return NextResponse.json({ packageInfo })
+    const { data: instances } = await supabase.from("whatsapp_instances").select("id").eq("created_by", user.id)
+
+    const currentInstances = instances?.length || 0
+    const maxInstances = packageInfo.packages?.max_instances || 1
+    const remainingInstances = Math.max(0, maxInstances - currentInstances)
+
+    return NextResponse.json({
+      packageInfo: {
+        user_id: packageInfo.user_id,
+        package_name: packageInfo.packages?.name || "basic",
+        display_name_tr: packageInfo.packages?.display_name_tr || "Temel",
+        display_name_en: packageInfo.packages?.display_name_en || "Basic",
+        max_instances: maxInstances,
+        current_instances: currentInstances,
+        remaining_instances: remainingInstances,
+        subscription_status: packageInfo.subscription_status || "active",
+      },
+    })
   } catch (error) {
     debugLog("[v0] Error in user package info API:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
