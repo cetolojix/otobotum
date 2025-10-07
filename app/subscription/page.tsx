@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SubscriptionCard } from "@/components/subscription-card"
 import { Loader2, Shield, CreditCard, Calendar } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -16,7 +14,6 @@ interface Package {
   display_name_en: string
   max_instances: number
   price_monthly: number
-  price_yearly: number
   features: string[]
   is_active: boolean
 }
@@ -34,7 +31,6 @@ export default function SubscriptionPage() {
   const [packages, setPackages] = useState<Package[]>([])
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null)
   const [loading, setLoading] = useState(true)
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly")
   const [error, setError] = useState("")
   const router = useRouter()
   const language = "tr" // Get from context/props
@@ -67,8 +63,8 @@ export default function SubscriptionPage() {
     }
   }
 
-  const handlePackageSelect = (packageId: string, cycle: "monthly" | "yearly") => {
-    router.push(`/checkout?package=${packageId}&cycle=${cycle}`)
+  const handlePackageSelect = (packageId: string) => {
+    router.push(`/checkout?package=${packageId}`)
   }
 
   if (loading) {
@@ -114,21 +110,6 @@ export default function SubscriptionPage() {
         </Alert>
       )}
 
-      {/* Billing Cycle Toggle */}
-      <div className="flex justify-center mb-12">
-        <Tabs value={billingCycle} onValueChange={(v) => setBillingCycle(v as "monthly" | "yearly")} className="w-auto">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="monthly">Aylık</TabsTrigger>
-            <TabsTrigger value="yearly">
-              Yıllık
-              <Badge variant="secondary" className="ml-2">
-                %17 İndirim
-              </Badge>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
       {/* Package Cards */}
       <div className="grid md:grid-cols-3 gap-8 mb-16">
         {packages.map((pkg) => (
@@ -137,7 +118,7 @@ export default function SubscriptionPage() {
             pkg={pkg}
             language={language}
             isCurrentPackage={currentSubscription?.package_id === pkg.id}
-            billingCycle={billingCycle}
+            billingCycle="monthly"
             onSelect={handlePackageSelect}
           />
         ))}

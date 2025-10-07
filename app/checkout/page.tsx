@@ -17,7 +17,6 @@ interface Package {
   display_name_en: string
   max_instances: number
   price_monthly: number
-  price_yearly: number
   features: {
     en: string[]
     tr: string[]
@@ -33,7 +32,6 @@ function CheckoutContent() {
   const [error, setError] = useState("")
 
   const packageId = searchParams.get("package")
-  const billingCycle = (searchParams.get("cycle") || "monthly") as "monthly" | "yearly"
   const language = "tr"
 
   useEffect(() => {
@@ -73,14 +71,14 @@ function CheckoutContent() {
     setError("")
 
     try {
-      console.log("[v0] Starting checkout for package:", pkg.id, "cycle:", billingCycle)
+      console.log("[v0] Starting checkout for package:", pkg.id)
 
       const response = await fetch("/api/subscriptions/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           packageId: pkg.id,
-          billingCycle,
+          billingCycle: "monthly",
         }),
       })
 
@@ -105,11 +103,31 @@ function CheckoutContent() {
 
       console.log("[v0] Checkout response:", { status: response.status, data })
 
-      if (response.ok && data.checkoutFormContent) {
-        console.log("[v0] Checkout form received, rendering...")
-        const checkoutContainer = document.createElement("div")
-        checkoutContainer.innerHTML = data.checkoutFormContent
-        document.body.appendChild(checkoutContainer)
+      if (response.ok && data.success && data.checkoutFormContent) {
+        console.log("[v0] Rendering iyzico checkout form...")
+
+        // Script tag'lerini manuel olarak çalıştır
+        const tempDiv = document.createElement("div")
+        tempDiv.innerHTML = data.checkoutFormContent
+
+        // Script tag'lerini bul ve çalıştır
+        const scripts = tempDiv.getElementsByTagName("script")
+        for (let i = 0; i < scripts.length; i++) {
+          const script = scripts[i]
+          const newScript = document.createElement("script")
+
+          if (script.src) {
+            newScript.src = script.src
+          } else {
+            newScript.textContent = script.textContent
+          }
+
+          document.body.appendChild(newScript)
+        }
+
+        // Processing state'i kapat
+        setProcessing(false)
+        console.log("[v0] Iyzico checkout form loaded successfully")
       } else {
         if (data.needsSetup) {
           setError(
@@ -158,8 +176,7 @@ function CheckoutContent() {
     )
   }
 
-  const price = billingCycle === "yearly" ? pkg.price_yearly : pkg.price_monthly
-  const monthlyPrice = billingCycle === "yearly" ? (pkg.price_yearly / 12).toFixed(2) : pkg.price_monthly
+  const price = pkg.price_monthly
   const displayName = language === "tr" ? pkg.display_name_tr : pkg.display_name_en
   const features = pkg.features[language] || pkg.features.tr || []
 
@@ -188,16 +205,11 @@ function CheckoutContent() {
                   <div>
                     <div className="font-semibold text-lg">{displayName}</div>
                     <div className="text-sm text-muted-foreground">
-                      {pkg.max_instances} WhatsApp Bot • {billingCycle === "yearly" ? "Yıllık" : "Aylık"} Abonelik
+                      {pkg.max_instances} WhatsApp Bot • Aylık Abonelik
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-xl">₺{(price / 100).toFixed(2).replace(".", ",")}</div>
-                    {billingCycle === "yearly" && (
-                      <div className="text-xs text-muted-foreground">
-                        ₺{(Number.parseFloat(monthlyPrice) / 100).toFixed(2).replace(".", ",")}/ay
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -222,12 +234,6 @@ function CheckoutContent() {
                 <span>Toplam</span>
                 <span>₺{(price / 100).toFixed(2).replace(".", ",")}</span>
               </div>
-
-              {billingCycle === "yearly" && (
-                <Badge variant="secondary" className="w-full justify-center py-2">
-                  Yıllık ödemede 2 ay ücretsiz!
-                </Badge>
-              )}
             </CardContent>
           </Card>
 
