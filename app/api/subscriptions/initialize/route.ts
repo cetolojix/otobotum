@@ -7,6 +7,8 @@ export async function POST(request: NextRequest) {
   try {
     const { packageId, billingCycle } = await request.json()
 
+    console.log("[v0] Initialize subscription request:", { packageId, billingCycle })
+
     if (!packageId || !billingCycle) {
       return NextResponse.json({ error: "Package ID and billing cycle are required" }, { status: 400 })
     }
@@ -19,6 +21,7 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      console.log("[v0] Auth error:", authError)
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
     }
 
@@ -26,6 +29,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
     if (!profile) {
+      console.log("[v0] Profile not found for user:", user.id)
       return NextResponse.json({ error: "User profile not found" }, { status: 404 })
     }
 
@@ -37,8 +41,15 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (packageError || !packageData) {
+      console.log("[v0] Package not found:", packageId, packageError)
       return NextResponse.json({ error: "Package not found" }, { status: 404 })
     }
+
+    console.log("[v0] Package data:", {
+      name: packageData.name,
+      hasMonthlyPlan: !!packageData.iyzico_monthly_plan_reference_code,
+      hasYearlyPlan: !!packageData.iyzico_yearly_plan_reference_code,
+    })
 
     // Get the appropriate pricing plan reference code
     const pricingPlanReferenceCode =
@@ -47,8 +58,17 @@ export async function POST(request: NextRequest) {
         : packageData.iyzico_monthly_plan_reference_code
 
     if (!pricingPlanReferenceCode) {
-      return NextResponse.json({ error: "Pricing plan not configured. Please contact support." }, { status: 500 })
+      console.log("[v0] Pricing plan not configured for package:", packageData.name, "cycle:", billingCycle)
+      return NextResponse.json(
+        {
+          error: "Pricing plan not configured. Please run iyzico setup first.",
+          needsSetup: true,
+        },
+        { status: 400 },
+      )
     }
+
+    console.log("[v0] Initializing subscription with plan:", pricingPlanReferenceCode)
 
     // Initialize subscription with iyzico
     const subscriptionResponse = await iyzicoSubscriptionClient.initializeSubscription({
@@ -77,15 +97,20 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    console.log("[v0] iyzico subscription response status:", subscriptionResponse.status)
+
     if (subscriptionResponse.status !== "success") {
       console.error("[v0] iyzico subscription error:", subscriptionResponse)
       return NextResponse.json(
         {
           error: subscriptionResponse.errorMessage || "Subscription initialization failed",
+          iyzicoError: subscriptionResponse.errorCode,
         },
         { status: 400 },
       )
     }
+
+    console.log("[v0] Subscription initialized successfully:", subscriptionResponse.subscriptionReferenceCode)
 
     // Save subscription to database
     const { error: subscriptionError } = await supabase.from("user_subscriptions").insert({
@@ -111,6 +136,12 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("[v0] Error initializing subscription:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

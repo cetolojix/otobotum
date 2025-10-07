@@ -10,7 +10,20 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { User, Mail, Phone, Building, Save, ArrowLeft, Shield, Calendar, LogOut, MapPin } from "lucide-react"
+import {
+  User,
+  Mail,
+  Phone,
+  Building,
+  Save,
+  ArrowLeft,
+  Shield,
+  Calendar,
+  LogOut,
+  MapPin,
+  Crown,
+  CreditCard,
+} from "lucide-react"
 import { debugLog } from "@/lib/debug"
 
 const turkishCities = [
@@ -397,6 +410,35 @@ export function ProfilePage({ user, profile }: ProfilePageProps) {
             </div>
 
             <div className="lg:col-span-2 space-y-6">
+              <Card className="hologram-card border-0 bg-gradient-to-r from-purple-50/10 to-pink-50/10 backdrop-blur-sm shadow-2xl animate-fade-in">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                        <Crown className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <CardTitle className="flex items-center gap-2 neon-text text-lg sm:text-xl">
+                          Abonelik Yönetimi
+                        </CardTitle>
+                        <CardDescription className="text-muted-foreground">
+                          Paketinizi ve ödeme bilgilerinizi yönetin
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    onClick={() => router.push("/account/subscription")}
+                    className="tech-button gap-2 px-4 sm:px-6 py-2 sm:py-3 text-white font-bold shadow-2xl shadow-purple-500/30 w-full sm:w-auto"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Aboneliği Yönet
+                  </Button>
+                </CardContent>
+              </Card>
+
               <Card className="hologram-card border-0 bg-background/80 backdrop-blur-sm shadow-2xl animate-fade-in">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 neon-text text-lg sm:text-xl">

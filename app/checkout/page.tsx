@@ -70,6 +70,8 @@ function CheckoutContent() {
     setError("")
 
     try {
+      console.log("[v0] Starting checkout for package:", pkg.id, "cycle:", billingCycle)
+
       const response = await fetch("/api/subscriptions/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,16 +83,28 @@ function CheckoutContent() {
 
       const data = await response.json()
 
+      console.log("[v0] Checkout response:", { status: response.status, data })
+
       if (response.ok && data.checkoutFormContent) {
+        console.log("[v0] Checkout form received, rendering...")
         const checkoutContainer = document.createElement("div")
         checkoutContainer.innerHTML = data.checkoutFormContent
         document.body.appendChild(checkoutContainer)
       } else {
-        setError(data.error || "Abonelik başlatılamadı")
+        if (data.needsSetup) {
+          setError(
+            "Abonelik sistemi henüz kurulmamış. Lütfen önce admin panelinden iyzico kurulumunu tamamlayın. (/admin/setup-iyzico)",
+          )
+        } else if (data.iyzicoError) {
+          setError(`iyzico Hatası: ${data.error} (Kod: ${data.iyzicoError})`)
+        } else {
+          setError(data.error || "Abonelik başlatılamadı")
+        }
         setProcessing(false)
       }
     } catch (err) {
-      setError("Bağlantı hatası")
+      console.error("[v0] Checkout error:", err)
+      setError("Bağlantı hatası. Lütfen tekrar deneyin.")
       setProcessing(false)
     }
   }

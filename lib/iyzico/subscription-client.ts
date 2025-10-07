@@ -103,8 +103,8 @@ interface SubscriptionResponse {
 class IyzicoSubscriptionClient {
   private config: IyzicoConfig
 
-  constructor() {
-    this.config = {
+  constructor(config?: IyzicoConfig) {
+    this.config = config || {
       apiKey: process.env.IYZICO_API_KEY || "",
       secretKey: process.env.IYZICO_SECRET_KEY || "",
       baseUrl: process.env.IYZICO_BASE_URL || "https://sandbox-api.iyzipay.com",
@@ -130,6 +130,9 @@ class IyzicoSubscriptionClient {
     const bodyString = JSON.stringify(body)
 
     try {
+      console.log("[v0] iyzico request:", url)
+      console.log("[v0] iyzico body:", bodyString)
+
       const response = await fetch(`${this.config.baseUrl}${url}`, {
         method: "POST",
         headers: {
@@ -140,10 +143,14 @@ class IyzicoSubscriptionClient {
         body: bodyString,
       })
 
+      console.log("[v0] iyzico response status:", response.status)
+
       const data = await response.json()
+      console.log("[v0] iyzico response data:", data)
+
       return data as T
     } catch (error) {
-      console.error("[iyzico-subscription] Request error:", error)
+      console.error("[v0] iyzico request error:", error)
       throw error
     }
   }
@@ -200,6 +207,7 @@ class IyzicoSubscriptionClient {
   }
 }
 
+export { IyzicoSubscriptionClient }
 export const iyzicoSubscriptionClient = new IyzicoSubscriptionClient()
 export type {
   CreateProductRequest,

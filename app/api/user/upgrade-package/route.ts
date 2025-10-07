@@ -32,20 +32,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid package" }, { status: 400 })
     }
 
-    // Update user's subscription
-    const { error: updateError } = await supabase.from("user_subscriptions").upsert(
-      {
-        user_id: user.id,
-        package_id: targetPackage.id,
-        status: "active",
-        started_at: new Date().toISOString(),
-        expires_at: null, // For now, no expiration
-        auto_renew: true,
-      },
-      {
-        onConflict: "user_id",
-      },
-    )
+    const { data: existingSubscription } = await supabase
+      .from("user_subscriptions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle()
+
+    const now = new Date()
+    const periodEnd = new Date(now)
+    periodEnd.setMonth(periodEnd.getMonth() + 1) // Default to 1 month subscription
+
+    const subscriptionData = {
+      user_id: user.id,
+      package_id: targetPackage.id,
+      status: "active",
+      current_period_start: now.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      cancel_at_period_end: false, // false means auto-renew is enabled
+    }
+
+    let updateError
+    if (existingSubscription) {
+      // Update existing subscription
+      const { error } = await supabase
+        .from("user_subscriptions")
+        .update(subscriptionData)
+        .eq("id", existingSubscription.id)
+      updateError = error
+    } else {
+      // Insert new subscription
+      const { error } = await supabase.from("user_subscriptions").insert(subscriptionData)
+      updateError = error
+    }
 
     if (updateError) {
       console.error("[v0] Error updating user subscription:", updateError)

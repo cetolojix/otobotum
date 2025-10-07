@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -38,6 +39,7 @@ interface PackageSelectorProps {
 
 export function PackageSelector({ language, onPackageChange }: PackageSelectorProps) {
   const t = getTranslation(language)
+  const router = useRouter()
   const [packages, setPackages] = useState<Package[]>([])
   const [currentPackage, setCurrentPackage] = useState<PackageInfo | null>(null)
   const [loading, setLoading] = useState(true)
@@ -51,44 +53,81 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
 
   const fetchPackages = async () => {
     try {
+      console.log("[v0] Fetching packages...")
       const response = await fetch("/api/packages")
       const data = await response.json()
+      console.log("[v0] Packages response:", { status: response.status, data })
 
       if (response.ok) {
         setPackages(data.packages)
       } else {
-        setError(data.error || "Failed to fetch packages")
+        const errorMsg = data.error || "Paketler yüklenirken hata oluştu"
+        console.log("[v0] Packages fetch error:", errorMsg)
+        setError(errorMsg)
       }
     } catch (err) {
-      setError("Network error")
+      console.log("[v0] Packages network error:", err)
+      setError(
+        language === "tr" ? "Bağlantı hatası: Paketler yüklenemedi" : "Connection error: Failed to load packages",
+      )
     }
   }
 
   const fetchCurrentPackage = async () => {
     try {
+      console.log("[v0] Fetching current package...")
       const response = await fetch("/api/user/package-info")
       const data = await response.json()
+      console.log("[v0] Current package response:", { status: response.status, data })
 
       if (response.ok) {
         setCurrentPackage(data.packageInfo)
-        onPackageChange?.(data.packageInfo)
       } else {
-        setError(data.error || "Failed to fetch current package")
+        const errorMsg = data.error || "Mevcut paket bilgisi alınamadı"
+        console.log("[v0] Current package fetch error:", errorMsg)
+        setError(errorMsg)
       }
     } catch (err) {
-      setError("Network error")
+      console.log("[v0] Current package network error:", err)
+      setError(
+        language === "tr"
+          ? "Bağlantı hatası: Paket bilgisi alınamadı"
+          : "Connection error: Failed to load package info",
+      )
     } finally {
       setLoading(false)
     }
   }
 
   const handleUpgrade = async (packageName: string) => {
-    if (currentPackage?.package_name === packageName) return
+    console.log("[v0] Handle upgrade called for package:", packageName)
+
+    if (currentPackage?.package_name === packageName) {
+      console.log("[v0] Package already selected, skipping")
+      return
+    }
+
+    const selectedPackage = packages.find((pkg) => pkg.name === packageName)
+    console.log("[v0] Selected package:", selectedPackage)
+
+    if (!selectedPackage) {
+      const errorMsg = language === "tr" ? "Paket bulunamadı" : "Package not found"
+      console.log("[v0] Package not found error")
+      setError(errorMsg)
+      return
+    }
+
+    if (selectedPackage.price_monthly > 0) {
+      console.log("[v0] Redirecting to checkout for paid package:", selectedPackage.id)
+      router.push(`/checkout?package=${selectedPackage.id}&cycle=monthly`)
+      return
+    }
 
     setUpgrading(packageName)
     setError("")
 
     try {
+      console.log("[v0] Upgrading to free package:", packageName)
       const response = await fetch("/api/user/upgrade-package", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -96,14 +135,27 @@ export function PackageSelector({ language, onPackageChange }: PackageSelectorPr
       })
 
       const data = await response.json()
+      console.log("[v0] Upgrade response:", { status: response.status, data })
 
       if (response.ok) {
-        await fetchCurrentPackage() // Refresh current package info
+        console.log("[v0] Upgrade successful, refreshing package info")
+        await fetchCurrentPackage()
+        if (currentPackage) {
+          onPackageChange?.({
+            ...currentPackage,
+            package_name: packageName,
+          })
+        }
       } else {
-        setError(data.error || "Failed to upgrade package")
+        const errorMsg = data.error || "Paket yükseltme başarısız"
+        console.log("[v0] Upgrade error:", errorMsg)
+        setError(errorMsg)
       }
     } catch (err) {
-      setError("Network error")
+      console.log("[v0] Upgrade network error:", err)
+      setError(
+        language === "tr" ? "Bağlantı hatası: Paket güncellenemedi" : "Connection error: Failed to update package",
+      )
     } finally {
       setUpgrading(null)
     }
