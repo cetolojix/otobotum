@@ -490,7 +490,10 @@ function getAdvancedWorkflowTemplate(
 - Çözemediğin sorunları insan desteğine yönlendir
 - Her zaman saygılı ve anlayışlı ol
 - Türkçe dilinde yanıt ver
-- Yanıtlarını kısa ve yardımcı tut`
+- Yanıtlarını kısa ve yardımcı tut
+
+ÖNEMLI: Eğer müşteri sipariş vermek istiyorsa, sipariş detaylarını (ürün adı, adet, fiyat) topla ve "SİPARİŞ:" ile başlayan bir mesaj oluştur.
+Örnek: SİPARİŞ: 2 adet Pizza Margherita, 1 adet Kola - Toplam: 150 TL`
 
   return {
     name: `WhatsApp Bot - ${instanceName}`,
@@ -616,6 +619,69 @@ return [{
       },
       {
         parameters: {
+          conditions: {
+            options: {
+              caseSensitive: false,
+            },
+            conditions: [
+              {
+                leftValue: "={{ $json.output || $json.result }}",
+                rightValue: "SİPARİŞ:",
+                operator: {
+                  type: "string",
+                  operation: "contains",
+                },
+              },
+            ],
+          },
+        },
+        type: "n8n-nodes-base.if",
+        typeVersion: 2,
+        position: [-80, 0],
+        id: "check-order-node",
+        name: "Check Order",
+      },
+      {
+        parameters: {
+          method: "POST",
+          url: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/google-sheets/save-order`,
+          sendHeaders: true,
+          headerParameters: {
+            parameters: [
+              {
+                name: "Content-Type",
+                value: "application/json",
+              },
+            ],
+          },
+          sendBody: true,
+          contentType: "json",
+          bodyParameters: {
+            parameters: [
+              {
+                name: "instanceName",
+                value: instanceName,
+              },
+              {
+                name: "customerPhone",
+                value:
+                  "={{ $('Debug Webhook Data').first().json.extractedPhone || $('Webhook').first().json.body?.data?.key?.remoteJid || '' }}",
+              },
+              {
+                name: "orderDetails",
+                value: "={{ $('AI Agent').first().json.output || $('AI Agent').first().json.result }}",
+              },
+            ],
+          },
+        },
+        type: "n8n-nodes-base.httpRequest",
+        typeVersion: 4,
+        position: [80, -100],
+        id: "save-to-sheets-node",
+        name: "Save to Google Sheets",
+      },
+      {
+        parameters: {
           method: "POST",
           url: `https://evolu.cetoloji.com/message/sendText/${instanceName}`,
           sendHeaders: true,
@@ -654,7 +720,7 @@ return [{
         },
         type: "n8n-nodes-base.httpRequest",
         typeVersion: 4,
-        position: [112, 0],
+        position: [240, 0],
         id: "563ae60e-b4d9-4290-9cde-086f23a3c7ca",
         name: "Send text",
       },
@@ -697,7 +763,7 @@ return [{
         main: [
           [
             {
-              node: "Send text",
+              node: "Check Order",
               type: "main",
               index: 0,
             },
@@ -710,6 +776,40 @@ return [{
             {
               node: "AI Agent",
               type: "ai_memory",
+              index: 0,
+            },
+          ],
+        ],
+      },
+      "Check Order": {
+        main: [
+          [
+            {
+              node: "Save to Google Sheets",
+              type: "main",
+              index: 0,
+            },
+            {
+              node: "Send text",
+              type: "main",
+              index: 0,
+            },
+          ],
+          [
+            {
+              node: "Send text",
+              type: "main",
+              index: 0,
+            },
+          ],
+        ],
+      },
+      "Save to Google Sheets": {
+        main: [
+          [
+            {
+              node: "Send text",
+              type: "main",
               index: 0,
             },
           ],

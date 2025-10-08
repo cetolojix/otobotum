@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Settings, Wand2, Copy, CheckCircle, AlertCircle, Play, Pause } from "lucide-react"
+import { GoogleSheetsConfig } from "@/components/google-sheets-config"
 
 interface PromptTemplate {
   id: string
@@ -358,6 +359,8 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
           )}
         </CardContent>
       </Card>
+
+      <GoogleSheetsConfig instanceName={instanceName} />
 
       <Card>
         <CardHeader>
