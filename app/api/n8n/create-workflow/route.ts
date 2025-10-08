@@ -644,7 +644,7 @@ return [{
       {
         parameters: {
           method: "POST",
-          url: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/google-sheets/save-order`,
+          url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://whatsappaiautomation2.vercel.app"}/api/google-sheets/save-order`,
           sendHeaders: true,
           headerParameters: {
             parameters: [
