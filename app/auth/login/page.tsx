@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 
@@ -18,24 +17,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [showResendConfirmation, setShowResendConfirmation] = useState(false)
-  const [countdown, setCountdown] = useState(0)
   const router = useRouter()
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout
-    if (countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000)
-    }
-    return () => clearTimeout(timer)
-  }, [countdown])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     const supabase = createClient()
     setIsLoading(true)
     setError(null)
-    setShowResendConfirmation(false)
 
     try {
       console.log("[v0] Attempting login with email:", email)
@@ -50,12 +38,7 @@ export default function LoginPage() {
       if (error) {
         console.log("[v0] Login error:", error.message)
 
-        if (error.message === "Email not confirmed") {
-          setError(
-            "Email adresiniz henüz doğrulanmamış. Email adresinizi kontrol edin veya yeni doğrulama emaili gönderin.",
-          )
-          setShowResendConfirmation(true)
-        } else if (error.message === "Invalid login credentials") {
+        if (error.message === "Invalid login credentials") {
           setError("Email veya şifre hatalı. Lütfen tekrar deneyin.")
         } else {
           setError(error.message)
@@ -70,72 +53,6 @@ export default function LoginPage() {
       setError(error instanceof Error ? error.message : "Bir hata oluştu")
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const handleResendConfirmation = async () => {
-    if (countdown > 0) {
-      setError(`Lütfen ${countdown} saniye bekleyin ve tekrar deneyin.`)
-      return
-    }
-
-    const supabase = createClient()
-    setIsLoading(true)
-
-    try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: email,
-        options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback`,
-        },
-      })
-
-      if (error) {
-        if (error.message.includes("For security purposes")) {
-          const match = error.message.match(/after (\d+) seconds/)
-          if (match) {
-            const seconds = Number.parseInt(match[1])
-            setCountdown(seconds)
-            setError(`Güvenlik amacıyla ${seconds} saniye beklemeniz gerekiyor.`)
-          } else {
-            setError("Doğrulama emaili gönderilemedi: " + error.message)
-          }
-        } else {
-          setError("Doğrulama emaili gönderilemedi: " + error.message)
-        }
-      } else {
-        setError("Doğrulama emaili gönderildi! Email adresinizi kontrol edin.")
-        setShowResendConfirmation(false)
-        setCountdown(60)
-      }
-    } catch (error) {
-      setError("Doğrulama emaili gönderilemedi. Lütfen tekrar deneyin.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleConfirmEmail = async () => {
-    if (email === "admin@whatsapp-ai.com") {
-      try {
-        const response = await fetch("/api/confirm-admin-email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
-        })
-
-        if (response.ok) {
-          setError("Admin email doğrulandı! Tekrar giriş yapmayı deneyin.")
-        } else {
-          setError("Email doğrulanamadı. Lütfen destek ile iletişime geçin.")
-        }
-      } catch (error) {
-        setError("Email doğrulanamadı. Lütfen destek ile iletişime geçin.")
-      }
     }
   }
 
@@ -185,31 +102,6 @@ export default function LoginPage() {
                     {error && (
                       <div className="text-sm text-red-500">
                         <p>{error}</p>
-                        {error.includes("Email") &&
-                          error.includes("doğrulanmamış") &&
-                          email === "admin@whatsapp-ai.com" && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="mt-2 w-full bg-transparent"
-                              onClick={handleConfirmEmail}
-                            >
-                              Admin Email Doğrula
-                            </Button>
-                          )}
-                        {showResendConfirmation && email !== "admin@whatsapp-ai.com" && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="mt-2 w-full bg-transparent"
-                            onClick={handleResendConfirmation}
-                            disabled={isLoading || countdown > 0}
-                          >
-                            {countdown > 0 ? `Doğrulama Emaili Gönder (${countdown}s)` : "Doğrulama Emaili Gönder"}
-                          </Button>
-                        )}
                       </div>
                     )}
                     <Button type="submit" className="w-full tech-button" disabled={isLoading}>

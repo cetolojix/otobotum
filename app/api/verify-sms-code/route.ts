@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
 import { getStoredVerificationCode, deleteVerificationCode } from "@/lib/verification-store"
 
 export async function POST(request: NextRequest) {
@@ -38,73 +39,102 @@ export async function POST(request: NextRequest) {
 
     if (fullName && password && email) {
       try {
+        const supabase = await createClient()
         const adminSupabase = createAdminClient()
 
-        // 1. Önce mevcut kullanıcıyı kontrol et
-        const { data: existingUser } = await adminSupabase.auth.admin.listUsers()
-        const userExists = existingUser.users.find((user) => user.email === email)
+        console.log("[v0] Creating user with signUp:", { email, fullName })
 
-        let authData
-        if (userExists) {
-          console.log("[v0] User already exists:", userExists.id)
-          authData = { user: userExists }
-        } else {
-          // 2. Yeni kullanıcı oluştur
-          const { data: newUserData, error: authError } = await adminSupabase.auth.admin.createUser({
-            email: email,
-            password: password,
-            email_confirm: true,
-            user_metadata: {
+        // Normal signUp kullan
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: {
               full_name: fullName,
-              phone: phone,
             },
-          })
+          },
+        })
 
-          if (authError) {
-            console.error("[v0] Auth user creation error:", authError)
-            return NextResponse.json({ error: "Kullanıcı oluşturulamadı: " + authError.message }, { status: 500 })
+        if (signUpError) {
+          console.error("[v0] SignUp error:", signUpError.message)
+
+          if (signUpError.message.includes("User already registered")) {
+            return NextResponse.json(
+              {
+                error: "Bu email adresi zaten kullanılıyor. Lütfen giriş yapın.",
+              },
+              { status: 400 },
+            )
           }
 
-          console.log("[v0] Auth user created successfully:", newUserData.user?.id)
-          authData = newUserData
+          return NextResponse.json(
+            {
+              error: "Kullanıcı oluşturulamadı: " + signUpError.message,
+            },
+            { status: 500 },
+          )
         }
 
-        // 3. Profile oluştur veya güncelle
-        if (authData.user) {
-          const { data: existingProfile } = await adminSupabase
-            .from("profiles")
-            .select("id")
-            .eq("id", authData.user.id)
-            .single()
+        console.log("[v0] User signed up successfully:", signUpData.user?.id)
 
-          if (!existingProfile) {
-            const { data: profileData, error: profileError } = await adminSupabase
-              .from("profiles")
-              .insert([
-                {
-                  id: authData.user.id,
-                  email: email,
-                  full_name: fullName,
-                  role: "user",
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                },
-              ])
-              .select()
+        if (signUpData.user) {
+          // Admin client ile email_confirmed_at update et
+          const { error: confirmError } = await adminSupabase.auth.admin.updateUserById(signUpData.user.id, {
+            email_confirm: true,
+          })
 
-            if (profileError) {
-              console.error("[v0] Profile creation error:", profileError)
-              console.log("[v0] Profile creation failed but auth user exists, continuing...")
-            } else {
-              console.log("[v0] Profile created successfully:", profileData)
-            }
+          if (confirmError) {
+            console.error("[v0] Email confirmation error:", confirmError)
           } else {
-            console.log("[v0] Profile already exists for user:", authData.user.id)
+            console.log("[v0] Email confirmed successfully")
           }
 
-          console.log("[v0] User created successfully, returning login credentials")
+          // Profile oluştur veya güncelle
+          const { error: profileError } = await adminSupabase.from("profiles").upsert(
+            [
+              {
+                id: signUpData.user.id,
+                email: email,
+                full_name: fullName,
+                phone: phone,
+                role: "user",
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+            ],
+            { onConflict: "id" },
+          )
 
-          // Login bilgilerini döndür ki client-side'da otomatik login yapabilsin
+          if (profileError) {
+            console.error("[v0] Profile creation error:", profileError)
+          } else {
+            console.log("[v0] Profile created successfully")
+          }
+
+          // Trial period oluştur
+          const trialEndDate = new Date()
+          trialEndDate.setDate(trialEndDate.getDate() + 3)
+
+          const { error: trialError } = await adminSupabase.from("trial_periods").insert([
+            {
+              user_id: signUpData.user.id,
+              started_at: new Date().toISOString(),
+              ends_at: trialEndDate.toISOString(),
+              is_active: true,
+              created_at: new Date().toISOString(),
+            },
+          ])
+
+          if (trialError) {
+            console.error("[v0] Trial period creation error:", trialError)
+          } else {
+            console.log("[v0] Trial period created successfully")
+          }
+
+          console.log("[v0] User created successfully, deleting verification code")
+          await deleteVerificationCode(phone)
+
+          console.log("[v0] Returning login credentials")
           return NextResponse.json({
             success: true,
             message: "Telefon numarası doğrulandı ve hesap oluşturuldu",
@@ -120,13 +150,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Doğrulama başarılı
-    console.log("[v0] SMS verification successful for phone:", phone)
-    await deleteVerificationCode(phone)
+    console.log("[v0] SMS verification successful for phone:", phone, "(code not deleted)")
 
     return NextResponse.json({
       success: true,
-      message: "Telefon numarası doğrulandı ve hesap oluşturuldu",
+      message: "Telefon numarası doğrulandı",
     })
   } catch (error) {
     console.error("[v0] Verification API error:", error)

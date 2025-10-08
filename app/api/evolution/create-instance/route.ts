@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
                 if (isFirstInstance) {
                   debugLog("[v0] Starting trial period for first instance")
                   const trialEndDate = new Date()
-                  trialEndDate.setDate(trialEndDate.getDate() + 7)
+                  trialEndDate.setDate(trialEndDate.getDate() + 3)
 
                   const { error: trialError } = await supabase.from("trial_periods").insert({
                     user_id: user.id,

@@ -235,8 +235,9 @@ DECLARE
   v_subscription_id UUID;
   v_trial_end_date TIMESTAMPTZ;
 BEGIN
-  -- Calculate trial end date (7 days from now)
-  v_trial_end_date := NOW() + INTERVAL '7 days';
+  -- Trial period 7 günden 3 güne düşürüldü
+  -- Calculate trial end date (3 days from now)
+  v_trial_end_date := NOW() + INTERVAL '3 days';
   
   -- Create trial period record
   INSERT INTO trial_periods (user_id, end_date)

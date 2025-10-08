@@ -130,7 +130,7 @@ export async function initializeTrialForNewUser(userId: string) {
   }
 
   const trialEndDate = new Date()
-  trialEndDate.setDate(trialEndDate.getDate() + 7)
+  trialEndDate.setDate(trialEndDate.getDate() + 3)
 
   console.log("[v0] Creating trial period for user:", userId, "ending at:", trialEndDate)
 
@@ -152,18 +152,7 @@ export async function initializeTrialForNewUser(userId: string) {
 
   console.log("[v0] Trial period created successfully:", trial)
 
-  const { data: starterPackage } = await supabaseAdmin.from("packages").select("id").eq("name", "basic").maybeSingle()
-
-  if (starterPackage) {
-    console.log("[v0] Assigning basic package to user:", userId)
-    await supabaseAdmin.from("user_packages").upsert({
-      user_id: userId,
-      package_id: starterPackage.id,
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-  }
+  // Artık yeni kullanıcıların paketi NULL olacak
 
   return trial
 }

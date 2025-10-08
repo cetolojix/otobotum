@@ -519,7 +519,7 @@ const cityDistricts: Record<string, string[]> = {
   Elazığ: [
     "Ağın",
     "Alacakaya",
-    "Arıcak",
+    "Aricak",
     "Baskil",
     "Karakoçan",
     "Keban",
@@ -1104,45 +1104,37 @@ export default function RegisterPage() {
     try {
       console.log("[v0] Starting user registration process")
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: {
-            email_verified: true, // Mark email as verified in metadata
-          },
+      const verifyResponse = await fetch("/api/verify-sms-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          phone: formatPhoneNumber(phone),
+          code: verificationCode,
+          fullName: fullName,
+          email: email,
+          password: password,
+        }),
       })
 
-      console.log("[v0] Supabase signup response:", { authData, authError })
+      const verifyData = await verifyResponse.json()
 
-      if (authError) {
-        console.error("[v0] Auth signup error details:", {
-          message: authError.message,
-          status: authError.status,
-          name: authError.name,
-          cause: authError.cause,
-        })
-
-        if (
-          authError.message.includes("User already registered") ||
-          authError.message.includes("already been registered")
-        ) {
-          setError("Bu email adresi zaten kayıtlı. Giriş yapmayı deneyin.")
-        } else if (authError.message.includes("Invalid email")) {
-          setError("Geçersiz email adresi formatı")
-        } else if (authError.message.includes("Password") || authError.message.includes("password")) {
-          setError("Şifre çok zayıf. En az 6 karakter kullanın.")
-        } else {
-          setError("Kayıt başarısız: " + authError.message)
-        }
+      if (!verifyResponse.ok) {
+        console.error("[v0] Verification failed:", verifyData)
+        setError(verifyData.error || "Doğrulama başarısız")
         return
       }
 
-      if (authData.user) {
-        console.log("[v0] Registration successful - user created:", authData.user.id)
+      console.log("[v0] User created successfully via SMS verification")
 
-        try {
+      try {
+        const { data: authData } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        })
+
+        if (authData.user) {
           const profileData = {
             id: authData.user.id,
             email: authData.user.email,
@@ -1160,7 +1152,7 @@ export default function RegisterPage() {
             role: "user",
           }
 
-          console.log("[v0] Creating profile via API with data:", profileData)
+          console.log("[v0] Updating profile with data:", profileData)
 
           const profileResponse = await fetch("/api/create-profile", {
             method: "POST",
@@ -1173,28 +1165,20 @@ export default function RegisterPage() {
           const profileResult = await profileResponse.json()
 
           if (!profileResponse.ok) {
-            console.error("[v0] Profile creation error via API:", profileResult)
-            setMessage("Hesabınız başarıyla oluşturuldu! Profil bilgileriniz güncellenecek. Giriş yapabilirsiniz.")
+            console.error("[v0] Profile update error:", profileResult)
           } else {
-            console.log("[v0] Profile operation successful:", profileResult)
-            if (profileResult.action === "updated") {
-              setMessage("Hesabınız başarıyla oluşturuldu! Mevcut profil bilgileriniz güncellendi.")
-            } else {
-              setMessage("Hesabınız ve profiliniz başarıyla oluşturuldu!")
-            }
+            console.log("[v0] Profile updated successfully:", profileResult)
           }
-        } catch (profileErr) {
-          console.error("[v0] Profile creation API exception:", profileErr)
-          setMessage("Hesabınız başarıyla oluşturuldu! Giriş yaparak profilinizi tamamlayabilirsiniz.")
         }
-
-        setTimeout(() => {
-          router.push("/auth/login")
-        }, 2000)
-      } else {
-        console.error("[v0] No user data returned from signup")
-        setError("Kayıt işlemi tamamlanamadı. Lütfen tekrar deneyin.")
+      } catch (profileErr) {
+        console.error("[v0] Profile update exception:", profileErr)
       }
+
+      setMessage("Hesabınız başarıyla oluşturuldu! Yönlendiriliyorsunuz...")
+
+      setTimeout(() => {
+        router.push("/instances")
+      }, 2000)
     } catch (err) {
       console.error("[v0] Registration error:", err)
 
