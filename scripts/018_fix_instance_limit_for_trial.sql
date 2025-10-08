@@ -40,9 +40,9 @@ BEGIN
         ORDER BY created_at DESC
         LIMIT 1;
 
-        -- If user has active trial, allow 2 instances
+        -- If user has active trial, allow 1 instance
         IF trial_info.is_active AND trial_info.ends_at > NOW() THEN
-            max_allowed := 2;
+            max_allowed := 1;
             
             -- Build result JSON for trial user
             result := json_build_object(
