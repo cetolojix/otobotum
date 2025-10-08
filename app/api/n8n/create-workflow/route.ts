@@ -393,7 +393,7 @@ User message: {{ $json.message.conversation }}`,
             },
             sendBody: true,
             contentType: "json",
-            jsonParameters: {
+            bodyParameters: {
               parameters: [
                 {
                   name: "number",
@@ -644,7 +644,7 @@ return [{
       {
         parameters: {
           method: "POST",
-          url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://whatsappaiautomation2.vercel.app"}/api/google-sheets/save-order`,
+          url: `https://www.cetobot.com/api/google-sheets/save-order`,
           sendHeaders: true,
           headerParameters: {
             parameters: [
@@ -786,11 +786,6 @@ return [{
           [
             {
               node: "Save to Google Sheets",
-              type: "main",
-              index: 0,
-            },
-            {
-              node: "Send text",
               type: "main",
               index: 0,
             },
