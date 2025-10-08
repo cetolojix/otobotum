@@ -39,10 +39,43 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch package information" }, { status: 500 })
     }
 
-    // Paket yoksa null döndürülüyor
-    if (!packageInfo) {
+    if (!packageInfo || !packageInfo.packages) {
       debugLog("[v0] No package info found for user:", user.id)
 
+      // Trial period kontrolü
+      const { data: trial } = await supabase
+        .from("trial_periods")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle()
+
+      const now = new Date()
+      const isInTrial = trial && new Date(trial.ends_at) > now
+
+      if (isInTrial) {
+        // Trial period aktif - 2 instance izni ver
+        const { data: instances } = await supabase.from("whatsapp_instances").select("id").eq("created_by", user.id)
+
+        const currentInstances = instances?.length || 0
+        const maxInstances = 2
+        const remainingInstances = Math.max(0, maxInstances - currentInstances)
+
+        return NextResponse.json({
+          packageInfo: {
+            user_id: user.id,
+            package_name: "trial",
+            display_name_tr: "Deneme Süresi",
+            display_name_en: "Trial Period",
+            max_instances: maxInstances,
+            current_instances: currentInstances,
+            remaining_instances: remainingInstances,
+            subscription_status: "trial",
+          },
+        })
+      }
+
+      // Trial yok veya bitti - paket yok
       return NextResponse.json({
         packageInfo: null,
       })
@@ -57,9 +90,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       packageInfo: {
         user_id: packageInfo.user_id,
-        package_name: packageInfo.packages?.name || "basic",
-        display_name_tr: packageInfo.packages?.display_name_tr || "Temel",
-        display_name_en: packageInfo.packages?.display_name_en || "Basic",
+        package_name: packageInfo.packages?.name,
+        display_name_tr: packageInfo.packages?.display_name_tr,
+        display_name_en: packageInfo.packages?.display_name_en,
         max_instances: maxInstances,
         current_instances: currentInstances,
         remaining_instances: remainingInstances,
