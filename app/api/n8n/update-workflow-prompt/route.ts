@@ -29,20 +29,32 @@ export async function POST(request: NextRequest) {
 
     const workflowsData = await workflowsResponse.json()
 
+    console.log("[v0] Searching for workflows matching instance:", instanceName)
+    console.log("[v0] Available workflows:", workflowsData.data?.map((w: any) => w.name).join(", "))
+
     const workflow = workflowsData.data?.find((w: any) => {
       const workflowName = w.name.toLowerCase()
       const instance = instanceName.toLowerCase()
 
-      return (
-        workflowName.includes(instance) &&
-        (workflowName.includes("whatsapp bot") ||
-          workflowName.includes("whatsapp ai") ||
-          workflowName.includes("whatsapp yapay zeka"))
-      )
+      // Workflow adı instance adını ve "whatsapp" kelimesini içermeli
+      return workflowName.includes(instance) && workflowName.includes("whatsapp")
     })
 
     if (!workflow) {
-      return NextResponse.json({ error: "Workflow not found for this instance" }, { status: 404 })
+      console.log("[v0] No workflow found for instance:", instanceName)
+      console.log(
+        "[v0] Available workflows:",
+        workflowsData.data?.map((w: any) => w.name),
+      )
+
+      return NextResponse.json(
+        {
+          error: "Workflow not found for this instance",
+          details: `Bu instance için otomatik yanıt sistemi bulunamadı. Lütfen önce "Aktif Et" butonuna tıklayarak sistemi oluşturun.`,
+          availableWorkflows: workflowsData.data?.map((w: any) => w.name) || [],
+        },
+        { status: 404 },
+      )
     }
 
     console.log("[v0] Found workflow:", workflow.id, workflow.name)

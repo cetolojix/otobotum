@@ -21,11 +21,8 @@ export interface OrderData {
  * @param orderData - Order data to append
  */
 export async function appendRowToSheet(config: GoogleSheetsConfig, orderData: OrderData): Promise<void> {
-  // This is a placeholder implementation
-  // In production, you would:
-  // 1. Install googleapis package: npm install googleapis
-  // 2. Set up service account credentials
-  // 3. Use the Google Sheets API to append rows
+  // This is a placeholder implementation for v0 preview
+  // In production, implement using Google Sheets REST API or googleapis package
 
   console.log("[v0] Appending row to Google Sheets:", {
     spreadsheet: config.spreadsheet_id,
@@ -33,38 +30,8 @@ export async function appendRowToSheet(config: GoogleSheetsConfig, orderData: Or
     data: orderData,
   })
 
-  /*
-  Example implementation:
-  
-  const { google } = require('googleapis');
-  const sheets = google.sheets('v4');
-  
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: config.service_account_email,
-      private_key: process.env.GOOGLE_SHEETS_PRIVATE_KEY,
-    },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-
-  const authClient = await auth.getClient();
-  
-  await sheets.spreadsheets.values.append({
-    auth: authClient,
-    spreadsheetId: config.spreadsheet_id,
-    range: `${config.sheet_name}!A:E`,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [[
-        orderData.date,
-        orderData.phone,
-        orderData.customerName,
-        orderData.orderDetails,
-        orderData.amount,
-      ]],
-    },
-  });
-  */
+  // TODO: Implement actual Google Sheets API integration in production
+  // Use REST API: POST to sheets API endpoint with service account auth
 }
 
 /**
@@ -73,10 +40,7 @@ export async function appendRowToSheet(config: GoogleSheetsConfig, orderData: Or
  */
 export async function validateSheetsAccess(config: GoogleSheetsConfig): Promise<boolean> {
   // This is a placeholder implementation
-  // In production, you would verify that:
-  // 1. The spreadsheet exists
-  // 2. The service account has write access
-  // 3. The specified sheet exists
+  // In production, verify spreadsheet exists and has write access
 
   console.log("[v0] Validating Google Sheets access:", {
     spreadsheet: config.spreadsheet_id,
@@ -92,28 +56,12 @@ export async function validateSheetsAccess(config: GoogleSheetsConfig): Promise<
  */
 export async function ensureSheetHeaders(config: GoogleSheetsConfig): Promise<void> {
   // This is a placeholder implementation
-  // In production, you would:
-  // 1. Check if the first row has headers
-  // 2. If not, add headers: Tarih, Telefon, Müşteri Adı, Sipariş Detayı, Tutar
+  // In production, check and add headers: Tarih, Telefon, Müşteri Adı, Sipariş Detayı, Tutar
 
   console.log("[v0] Ensuring sheet headers exist:", {
     spreadsheet: config.spreadsheet_id,
     sheet: config.sheet_name,
   })
 
-  /*
-  Example implementation:
-  
-  const headers = ['Tarih', 'Telefon', 'Müşteri Adı', 'Sipariş Detayı', 'Tutar'];
-  
-  await sheets.spreadsheets.values.update({
-    auth: authClient,
-    spreadsheetId: config.spreadsheet_id,
-    range: `${config.sheet_name}!A1:E1`,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [headers],
-    },
-  });
-  */
+  // TODO: Implement header creation in production
 }

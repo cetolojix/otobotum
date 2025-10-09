@@ -109,58 +109,28 @@ export async function POST(request: NextRequest) {
 }
 
 async function syncOrderToGoogleSheets(config: any, order: any) {
-  // In a real implementation, you would:
-  // 1. Use Google Sheets API with service account credentials
-  // 2. Append a new row to the specified sheet
-  // 3. Format: [Date, Phone, Customer Name, Order Details, Amount]
-
   console.log("[v0] Syncing order to Google Sheets:", {
     spreadsheet_id: config.spreadsheet_id,
     sheet_name: config.sheet_name,
     order_id: order.id,
   })
 
-  // Example implementation with Google Sheets API:
-  /*
-  const { google } = require('googleapis');
-  const sheets = google.sheets('v4');
-  
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: config.service_account_email,
-      private_key: process.env.GOOGLE_SHEETS_PRIVATE_KEY,
-    },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
+  // Format the row data
+  const rowData = [
+    new Date(order.order_date).toLocaleString("tr-TR"),
+    order.customer_phone,
+    order.customer_name || "-",
+    order.order_details,
+    order.order_amount ? `${order.order_amount} TL` : "-",
+  ]
 
-  const authClient = await auth.getClient();
-  
-  await sheets.spreadsheets.values.append({
-    auth: authClient,
-    spreadsheetId: config.spreadsheet_id,
-    range: `${config.sheet_name}!A:E`,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [[
-        new Date(order.order_date).toLocaleString('tr-TR'),
-        order.customer_phone,
-        order.customer_name || '-',
-        order.order_details,
-        order.order_amount || '-',
-      ]],
-    },
-  });
-  */
+  console.log("[v0] Would append row to Google Sheets:", rowData)
 
-  // For now, just log that we would sync
-  console.log("[v0] Would append row to Google Sheets:", {
-    date: new Date(order.order_date).toLocaleString("tr-TR"),
-    phone: order.customer_phone,
-    name: order.customer_name || "-",
-    details: order.order_details,
-    amount: order.order_amount || "-",
-  })
+  // In production, use Google Sheets REST API:
+  // 1. Get OAuth2 access token using service account
+  // 2. Call sheets.spreadsheets.values.append endpoint
+  // 3. URL: https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}:append
 
-  // Simulate successful sync
+  // For now, simulate successful sync
   return true
 }
