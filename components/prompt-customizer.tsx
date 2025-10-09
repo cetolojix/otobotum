@@ -224,6 +224,11 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
       return
     }
 
+    if (!workflowData) {
+      setError('Önce "Aktif Et" butonuna tıklayarak otomatik yanıt sistemini oluşturun')
+      return
+    }
+
     setIsSaving(true)
     setError("")
     setSaveSuccess(false)

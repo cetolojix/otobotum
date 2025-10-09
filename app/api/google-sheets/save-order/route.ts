@@ -126,10 +126,8 @@ async function syncOrderToGoogleSheets(config: any, order: any) {
 
   console.log("[v0] Would append row to Google Sheets:", rowData)
 
-  // In production, use Google Sheets REST API:
-  // 1. Get OAuth2 access token using service account
-  // 2. Call sheets.spreadsheets.values.append endpoint
-  // 3. URL: https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/values/{range}:append
+  // In production, use Google Sheets REST API with service account authentication
+  // to append rows to the spreadsheet
 
   // For now, simulate successful sync
   return true
