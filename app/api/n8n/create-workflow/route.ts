@@ -579,7 +579,7 @@ return [{
       {
         parameters: {
           promptType: "define",
-          text: "={{ $json.body.data.message.conversation }}",
+          text: "={{ $json.extractedMessage }}",
           options: {
             systemMessage: systemPrompt,
           },
