@@ -43,22 +43,16 @@ export function InstanceDashboard({ instanceName }: InstanceDashboardProps) {
   })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
-  const [instanceStatus, setInstanceStatus] = useState<"connected" | "disconnected" | "connecting" | "not_found">(
-    "connecting",
-  )
+  const [instanceStatus, setInstanceStatus] = useState<"connected" | "disconnected" | "connecting">("connecting")
 
   const fetchInstanceStatus = async () => {
     try {
       const response = await fetch(`/api/evolution/status?instance=${encodeURIComponent(instanceName)}`)
       const data = await response.json()
 
-      if (data.success) {
+      if (response.ok) {
         setInstanceStatus(data.status)
-        if (data.status === "not_found") {
-          setError("")
-        } else {
-          setError("")
-        }
+        setError("")
       } else {
         throw new Error(data.error || "Durum bilgisi alınamadı")
       }
@@ -118,13 +112,6 @@ export function InstanceDashboard({ instanceName }: InstanceDashboardProps) {
           <Badge variant="secondary" className="gap-1">
             <Clock className="h-3 w-3" />
             Bağlanıyor...
-          </Badge>
-        )
-      case "not_found":
-        return (
-          <Badge variant="outline" className="gap-1">
-            <AlertCircle className="h-3 w-3" />
-            Bulunamadı
           </Badge>
         )
       default:

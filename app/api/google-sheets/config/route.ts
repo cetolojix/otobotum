@@ -26,9 +26,9 @@ export async function GET(request: NextRequest) {
       .select("*")
       .eq("user_id", user.id)
       .eq("instance_name", instanceName)
-      .maybeSingle()
+      .single()
 
-    if (error) {
+    if (error && error.code !== "PGRST116") {
       throw error
     }
 

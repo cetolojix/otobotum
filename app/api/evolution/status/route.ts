@@ -77,18 +77,8 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      // Update: 404 durumunda error yerine success response döndür - instance silinmiş veya mevcut değil
       if (response.status === 404) {
-        return NextResponse.json({
-          success: true,
-          status: "not_found",
-          instanceName,
-          details: {
-            state: "not_found",
-            message: "Instance bulunamadı veya silinmiş",
-          },
-          timestamp: new Date().toISOString(),
-        })
+        return NextResponse.json({ error: "Instance not found" }, { status: 404 })
       }
 
       return NextResponse.json({

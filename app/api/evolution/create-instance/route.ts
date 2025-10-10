@@ -230,32 +230,20 @@ export async function POST(request: NextRequest) {
 
                 if (isFirstInstance) {
                   debugLog("[v0] Starting trial period for first instance")
+                  const trialEndDate = new Date()
+                  trialEndDate.setDate(trialEndDate.getDate() + 3)
 
-                  // Önce mevcut trial period var mı kontrol et
-                  const { data: existingTrial } = await supabase
-                    .from("trial_periods")
-                    .select("id")
-                    .eq("user_id", user.id)
-                    .maybeSingle()
+                  const { error: trialError } = await supabase.from("trial_periods").insert({
+                    user_id: user.id,
+                    started_at: new Date().toISOString(),
+                    ends_at: trialEndDate.toISOString(),
+                    is_active: true,
+                  })
 
-                  if (!existingTrial) {
-                    const trialEndDate = new Date()
-                    trialEndDate.setDate(trialEndDate.getDate() + 3)
-
-                    const { error: trialError } = await supabase.from("trial_periods").insert({
-                      user_id: user.id,
-                      started_at: new Date().toISOString(),
-                      ends_at: trialEndDate.toISOString(),
-                      is_active: true,
-                    })
-
-                    if (trialError) {
-                      debugLog("[v0] Error creating trial period:", trialError)
-                    } else {
-                      debugLog("[v0] Trial period successfully created")
-                    }
+                  if (trialError) {
+                    debugLog("[v0] Error creating trial period:", trialError)
                   } else {
-                    debugLog("[v0] Trial period already exists, skipping creation")
+                    debugLog("[v0] Trial period successfully created")
                   }
                 }
               }

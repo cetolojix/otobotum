@@ -47,8 +47,6 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
   const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(false)
   const [workflowError, setWorkflowError] = useState("")
 
-  const [websiteUrl, setWebsiteUrl] = useState("")
-
   const fetchTemplates = async () => {
     try {
       const response = await fetch("/api/ai/prompts")
@@ -76,8 +74,6 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
       const response = await fetch(`/api/n8n/workflow-status?instance=${encodeURIComponent(instanceName)}`)
       const data = await response.json()
 
-      console.log("[v0] Workflow status response:", { ok: response.ok, status: response.status, data })
-
       if (!response.ok) {
         if (response.status === 503) {
           setWorkflowError("Workflow servisi şu anda kullanılamıyor")
@@ -88,7 +84,6 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
 
       if (data.workflows && data.workflows.length > 0) {
         const workflow = data.workflows[0]
-        console.log("[v0] Setting workflowData:", { id: workflow.id, name: workflow.name, active: workflow.active })
         setWorkflowData(workflow)
         setWorkflowEnabled(workflow.active)
 
@@ -100,12 +95,10 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
           console.log("[v0] No prompt found in workflow")
         }
       } else {
-        console.log("[v0] No workflows found for instance - setting workflowData to null")
+        console.log("[v0] No workflows found for instance")
         setWorkflowData(null)
         setWorkflowEnabled(false)
       }
-
-      await loadWebsiteUrl()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Workflow durumu kontrol edilemedi"
       console.error("[v0] Error checking workflow status:", errorMessage)
@@ -115,50 +108,7 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
     }
   }
 
-  const loadWebsiteUrl = async () => {
-    try {
-      const response = await fetch(`/api/instances/website-url?instance=${encodeURIComponent(instanceName)}`)
-      const data = await response.json()
-
-      if (response.ok && data.websiteUrl) {
-        setWebsiteUrl(data.websiteUrl)
-      }
-    } catch (err) {
-      console.error("[v0] Error loading website URL:", err)
-    }
-  }
-
-  const saveWebsiteUrl = async () => {
-    try {
-      const response = await fetch("/api/instances/website-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instanceName,
-          websiteUrl: websiteUrl.trim(),
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Web sitesi URL'i kaydedilemedi")
-      }
-
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Web sitesi URL'i kaydedilemedi"
-      setError(errorMessage)
-    }
-  }
-
   const toggleWorkflow = async () => {
-    console.log(
-      "[v0] toggleWorkflow called - workflowData:",
-      workflowData ? { id: workflowData.id, name: workflowData.name } : "null",
-    )
-
     if (!workflowData) {
       console.log("[v0] No workflow found, creating new workflow for instance:", instanceName)
       setIsLoadingWorkflow(true)
@@ -208,9 +158,11 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
 
         console.log("[v0] Workflow toggle successful:", data)
 
+        // Update local state immediately
         setWorkflowEnabled(newActiveState)
         setWorkflowData({ ...workflowData, active: newActiveState })
 
+        // Also refresh status to be sure
         setTimeout(() => checkWorkflowStatus(), 1000)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Otomatik yanıt durumu değiştirilemedi"
@@ -305,8 +257,10 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
 
+      // Also call the parent callback
       onPromptChange?.(customPrompt)
 
+      // Refresh workflow status
       await checkWorkflowStatus()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Prompt kaydedilemedi"
@@ -412,50 +366,6 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
       </Card>
 
       <GoogleSheetsConfig instanceName={instanceName} />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Web Sitesi Entegrasyonu
-          </CardTitle>
-          <CardDescription>
-            Ürün bilgileri için web sitenizin arama URL'ini girin. AI agent müşteri ürün sorduğunda ürün adını otomatik
-            ekleyecek.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Arama URL (Ürün adı otomatik eklenecek)</label>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                placeholder="https://www.ornek.com/arama/"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-              <Button onClick={saveWebsiteUrl} disabled={!websiteUrl.trim()} size="sm">
-                Kaydet
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Örnek: https://www.onlineyedekparca.com/arama/ - AI agent ürün adını sonuna ekleyecek
-            </p>
-          </div>
-
-          <div className="rounded-lg bg-muted/50 p-3">
-            <h4 className="text-sm font-medium text-foreground mb-2">Nasıl Çalışır?</h4>
-            <ul className="space-y-1 text-xs text-muted-foreground">
-              <li>• Web sitenizin arama URL'ini girin (örn: https://www.ornek.com/arama/)</li>
-              <li>• URL'in sonuna "/" ekleyin, AI agent ürün adını otomatik ekleyecek</li>
-              <li>• Müşteri "fren balatası" sorarsa → https://www.ornek.com/arama/fren-balatası</li>
-              <li>• AI agent web sitesinden ürün bilgilerini çekip müşteriye sunacak</li>
-              <li>• Eğer ürün bulunamazsa, müşteriye yönlendirme yapacak</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
