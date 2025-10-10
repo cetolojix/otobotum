@@ -604,7 +604,7 @@ return [{
       {
         parameters: {
           promptType: "define",
-          text: "={{ $json.body.data.message.conversation }}",
+          text: "={{ $('Debug Webhook Data').first().json.extractedMessage }}",
           options: {
             systemMessage: systemPrompt,
           },
