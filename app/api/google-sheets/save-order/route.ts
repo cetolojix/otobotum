@@ -38,7 +38,9 @@ export async function POST(request: NextRequest) {
         customer_name: customerName || null,
         order_details: orderDetails,
         order_amount: finalAmount || null,
+        order_date: new Date().toISOString(),
         synced_to_sheets: false,
+        config_id: null,
       })
       .select()
       .single()
