@@ -10,7 +10,6 @@ import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Settings, Wand2, Copy, CheckCircle, AlertCircle, Play, Pause } from "lucide-react"
 import { GoogleSheetsConfig } from "@/components/google-sheets-config"
-import { ProductManager } from "@/components/product-manager"
 
 interface PromptTemplate {
   id: string
@@ -367,8 +366,6 @@ export function PromptCustomizer({ instanceName, onPromptChange }: PromptCustomi
       </Card>
 
       <GoogleSheetsConfig instanceName={instanceName} />
-
-      <ProductManager instanceName={instanceName} />
 
       <Card>
         <CardHeader>

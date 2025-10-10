@@ -209,18 +209,26 @@ If you don't know something, be honest about it. Always maintain a positive tone
               ],
             },
             sendBody: true,
-            specifyBody: "json",
-            jsonBody: `={
-  "instanceName": "${instanceName}",
-  "productQuery": "{{ $json.productQuery }}"
-}`,
+            contentType: "json",
+            jsonParameters: {
+              parameters: [
+                {
+                  name: "number",
+                  value: "={{ $json.key.remoteJid }}",
+                },
+                {
+                  name: "text",
+                  value: "={{ $json.data.choices[0].text || $json.choices[0].message.content }}",
+                },
+              ],
+            },
             options: {},
           },
-          type: "@n8n/n8n-nodes-langchain.toolHttpRequest",
-          typeVersion: 1.1,
-          position: [900, 200],
           id: "send-response",
           name: "Send AI Response",
+          type: "n8n-nodes-base.httpRequest",
+          typeVersion: 4,
+          position: [900, 200],
         },
         {
           parameters: {
@@ -484,15 +492,8 @@ function getAdvancedWorkflowTemplate(
 - Türkçe dilinde yanıt ver
 - Yanıtlarını kısa ve yardımcı tut
 
-ÜRÜN ARAMA:
-- Müşteri bir ürün hakkında bilgi sorduğunda, "search_product" tool'unu kullan
-- Ürün adını tool'a gönder ve dönen bilgileri müşteriye aktar
-- Ürün bulunamazsa, müşteriye nazikçe bildir ve başka ürün öner
-
-SİPARİŞ ALMA:
-- Eğer müşteri sipariş vermek istiyorsa, sipariş detaylarını (ürün adı, adet, fiyat) topla
-- "SİPARİŞ:" ile başlayan bir mesaj oluştur
-- Örnek: SİPARİŞ: 2 adet Pizza Margherita, 1 adet Kola - Toplam: 150 TL`
+ÖNEMLI: Eğer müşteri sipariş vermek istiyorsa, sipariş detaylarını (ürün adı, adet, fiyat) topla ve "SİPARİŞ:" ile başlayan bir mesaj oluştur.
+Örnek: SİPARİŞ: 2 adet Pizza Margherita, 1 adet Kola - Toplam: 150 TL`
 
   return {
     name: `WhatsApp Bot - ${instanceName}`,
@@ -571,7 +572,7 @@ return [{
       {
         parameters: {
           promptType: "define",
-          text: "={{ $json.extractedMessage }}",
+          text: "={{ $json.body.data.message.conversation }}",
           options: {
             systemMessage: systemPrompt,
           },
@@ -615,36 +616,6 @@ return [{
         position: [-192, 256],
         id: "bc63e2f7-83d8-498a-b589-74f06ba233b8",
         name: "Window Buffer Memory",
-      },
-      {
-        parameters: {
-          name: "search_product",
-          description:
-            "Ürün bilgilerini aramak için kullanın. Müşteri bir ürün hakkında bilgi sorduğunda bu tool'u kullanın. Ürün adını veya anahtar kelimeyi 'productQuery' parametresine gönderin.",
-          method: "POST",
-          url: `https://www.cetobot.com/api/products/search`,
-          sendHeaders: true,
-          headerParameters: {
-            parameters: [
-              {
-                name: "Content-Type",
-                value: "application/json",
-              },
-            ],
-          },
-          sendBody: true,
-          specifyBody: "json",
-          jsonBody: `={
-  "instanceName": "${instanceName}",
-  "productQuery": "{{ $json.productQuery }}"
-}`,
-          options: {},
-        },
-        type: "@n8n/n8n-nodes-langchain.toolHttpRequest",
-        typeVersion: 1.1,
-        position: [-320, 360],
-        id: "product-search-tool",
-        name: "Search Product Tool",
       },
       {
         parameters: {
@@ -693,7 +664,8 @@ return [{
               },
               {
                 name: "customerPhone",
-                value: "={{ $('Debug Webhook Data').first().json.extractedPhone || 'unknown' }}",
+                value:
+                  "={{ $('Debug Webhook Data').first().json.extractedPhone || $('Webhook').first().json.body?.data?.key?.remoteJid || '' }}",
               },
               {
                 name: "orderDetails",
@@ -705,8 +677,8 @@ return [{
         type: "n8n-nodes-base.httpRequest",
         typeVersion: 4,
         position: [80, -100],
-        id: "save-to-sheets-node",
-        name: "Save to Google Sheets",
+        id: "save-order-node",
+        name: "Save Order",
       },
       {
         parameters: {
@@ -731,7 +703,8 @@ return [{
             parameters: [
               {
                 name: "number",
-                value: "={{ $('Debug Webhook Data').first().json.extractedPhone || '' }}",
+                value:
+                  "={{ ( $('Webhook').first().json.body?.data?.key?.remoteJid || $('Webhook').first().json.body?.key?.remoteJid || $('Webhook').first().json.data?.key?.remoteJid || $('Webhook').first().json.key?.remoteJid || '' ).replace('@s.whatsapp.net','') }}",
               },
               {
                 name: "text",
@@ -808,22 +781,11 @@ return [{
           ],
         ],
       },
-      "Search Product Tool": {
-        ai_tool: [
-          [
-            {
-              node: "AI Agent",
-              type: "ai_tool",
-              index: 0,
-            },
-          ],
-        ],
-      },
       "Check Order": {
         main: [
           [
             {
-              node: "Save to Google Sheets",
+              node: "Save Order",
               type: "main",
               index: 0,
             },
@@ -837,7 +799,7 @@ return [{
           ],
         ],
       },
-      "Save to Google Sheets": {
+      "Save Order": {
         main: [
           [
             {

@@ -227,38 +227,6 @@ export async function POST(request: NextRequest) {
                 // Don't fail the request if database save fails, but log it
               } else {
                 debugLog("[v0] Instance successfully saved to database")
-
-                if (isFirstInstance) {
-                  debugLog("[v0] Checking if trial period already exists")
-                  const { data: existingTrial, error: trialCheckError } = await supabase
-                    .from("trial_periods")
-                    .select("id")
-                    .eq("user_id", user.id)
-                    .maybeSingle()
-
-                  if (trialCheckError) {
-                    debugLog("[v0] Error checking trial period:", trialCheckError)
-                  } else if (existingTrial) {
-                    debugLog("[v0] Trial period already exists, skipping creation")
-                  } else {
-                    debugLog("[v0] Starting trial period for first instance")
-                    const trialEndDate = new Date()
-                    trialEndDate.setDate(trialEndDate.getDate() + 3)
-
-                    const { error: trialError } = await supabase.from("trial_periods").insert({
-                      user_id: user.id,
-                      started_at: new Date().toISOString(),
-                      ends_at: trialEndDate.toISOString(),
-                      is_active: true,
-                    })
-
-                    if (trialError) {
-                      debugLog("[v0] Error creating trial period:", trialError)
-                    } else {
-                      debugLog("[v0] Trial period successfully created")
-                    }
-                  }
-                }
               }
             } catch (dbErr) {
               debugLog("[v0] Failed to save instance to database:", dbErr)

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, TestTube, Bot, Plus, MessageSquare, LogOut, User, MessageCircle } from "lucide-react"
+import { Settings, TestTube, Bot, Plus, MessageSquare, LogOut, User, MessageCircle, ShoppingCart } from "lucide-react"
 import { InstanceSetup } from "@/components/instance-setup"
 import { QRCodeDisplay } from "@/components/qr-code-display"
 import { PromptCustomizer } from "@/components/prompt-customizer"
@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation"
 import { updateInstanceStatus } from "@/app/actions/update-instance-status"
 import { deleteInstance } from "@/app/actions/delete-instance"
 import { YapayZekaChatTester } from "@/components/yapay-zeka-chat-tester"
+import { OrdersManager } from "@/components/orders-manager"
 import { debugLog } from "@/lib/debug"
 
 interface Instance {
@@ -398,7 +399,7 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
                 {selectedInstance && (
                   <Tabs defaultValue="dashboard" className="space-y-6 sm:space-y-8">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <TabsList className="hologram-card grid w-full sm:max-w-2xl grid-cols-3 h-12 sm:h-14 bg-background/50 backdrop-blur-sm border-0 shadow-lg">
+                      <TabsList className="hologram-card grid w-full sm:max-w-3xl grid-cols-4 h-12 sm:h-14 bg-background/50 backdrop-blur-sm border-0 shadow-lg">
                         <TabsTrigger
                           value="dashboard"
                           className="gap-1 sm:gap-2 font-medium text-xs sm:text-sm data-[state=active]:bg-neon-blue/20 data-[state=active]:text-neon-cyan px-2 sm:px-3"
@@ -414,6 +415,13 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
                           <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
                           <span className="hidden xs:inline">YZ</span>
                           <span className="hidden sm:inline">Yapay Zeka Ayarları</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="orders"
+                          className="gap-1 sm:gap-2 font-medium text-xs sm:text-sm data-[state=active]:bg-neon-blue/20 data-[state=active]:text-neon-cyan px-2 sm:px-3"
+                        >
+                          <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden xs:inline">Siparişler</span>
                         </TabsTrigger>
                         <TabsTrigger
                           value="test-chat"
@@ -439,6 +447,10 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
 
                     <TabsContent value="ai-config" className="space-y-6">
                       <PromptCustomizer instanceName={selectedInstance} onPromptChange={setCustomPrompt} />
+                    </TabsContent>
+
+                    <TabsContent value="orders" className="space-y-6">
+                      <OrdersManager instanceName={selectedInstance} />
                     </TabsContent>
 
                     <TabsContent value="test-chat" className="space-y-6">
