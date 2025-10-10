@@ -761,64 +761,6 @@ return [{
         id: "563ae60e-b4d9-4290-9cde-086f23a3c7ca",
         name: "Send text",
       },
-      {
-        parameters: {
-          httpMethod: "POST",
-          path: `product-search-${instanceName}`,
-          options: {},
-        },
-        type: "n8n-nodes-base.webhook",
-        typeVersion: 2.1,
-        position: [-560, 400],
-        id: "product-search-webhook",
-        name: "Product Search Webhook",
-        webhookId: `product-search-${instanceName}`,
-      },
-      {
-        parameters: {
-          method: "POST",
-          url: `https://www.cetobot.com/api/products/search`,
-          sendHeaders: true,
-          headerParameters: {
-            parameters: [
-              {
-                name: "Content-Type",
-                value: "application/json",
-              },
-            ],
-          },
-          sendBody: true,
-          contentType: "json",
-          bodyParameters: {
-            parameters: [
-              {
-                name: "instanceName",
-                value: instanceName,
-              },
-              {
-                name: "productQuery",
-                value: "={{ $json.body.productQuery || $json.productQuery }}",
-              },
-            ],
-          },
-        },
-        type: "n8n-nodes-base.httpRequest",
-        typeVersion: 4,
-        position: [-400, 400],
-        id: "call-product-search-api",
-        name: "Call Product Search API",
-      },
-      {
-        parameters: {
-          respondWith: "json",
-          responseBody: "={{ $json }}",
-        },
-        type: "n8n-nodes-base.respondToWebhook",
-        typeVersion: 1,
-        position: [-240, 400],
-        id: "product-search-response",
-        name: "Product Search Response",
-      },
     ],
     connections: {
       Webhook: {
@@ -910,28 +852,6 @@ return [{
           [
             {
               node: "Send text",
-              type: "main",
-              index: 0,
-            },
-          ],
-        ],
-      },
-      "Product Search Webhook": {
-        main: [
-          [
-            {
-              node: "Call Product Search API",
-              type: "main",
-              index: 0,
-            },
-          ],
-        ],
-      },
-      "Call Product Search API": {
-        main: [
-          [
-            {
-              node: "Product Search Response",
               type: "main",
               index: 0,
             },
