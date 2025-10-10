@@ -209,26 +209,18 @@ If you don't know something, be honest about it. Always maintain a positive tone
               ],
             },
             sendBody: true,
-            contentType: "json",
-            jsonParameters: {
-              parameters: [
-                {
-                  name: "number",
-                  value: "={{ $json.key.remoteJid }}",
-                },
-                {
-                  name: "text",
-                  value: "={{ $json.data.choices[0].text || $json.choices[0].message.content }}",
-                },
-              ],
-            },
+            specifyBody: "json",
+            jsonBody: `={
+  "instanceName": "${instanceName}",
+  "productQuery": "{{ $json.productQuery }}"
+}`,
             options: {},
           },
+          type: "@n8n/n8n-nodes-langchain.toolHttpRequest",
+          typeVersion: 1.1,
+          position: [900, 200],
           id: "send-response",
           name: "Send AI Response",
-          type: "n8n-nodes-base.httpRequest",
-          typeVersion: 4,
-          position: [900, 200],
         },
         {
           parameters: {
@@ -701,8 +693,7 @@ return [{
               },
               {
                 name: "customerPhone",
-                value:
-                  "={{ $('Debug Webhook Data').first().json.extractedPhone || $('Webhook').first().json.body?.data?.key?.remoteJid || '' }}",
+                value: "={{ $('Debug Webhook Data').first().json.extractedPhone || 'unknown' }}",
               },
               {
                 name: "orderDetails",
@@ -740,8 +731,7 @@ return [{
             parameters: [
               {
                 name: "number",
-                value:
-                  "={{ ( $('Webhook').first().json.body?.data?.key?.remoteJid || $('Webhook').first().json.body?.key?.remoteJid || $('Webhook').first().json.data?.key?.remoteJid || $('Webhook').first().json.key?.remoteJid || '' ).replace('@s.whatsapp.net','') }}",
+                value: "={{ $('Debug Webhook Data').first().json.extractedPhone || '' }}",
               },
               {
                 name: "text",
