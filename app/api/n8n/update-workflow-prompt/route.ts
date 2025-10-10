@@ -127,27 +127,47 @@ export async function POST(request: NextRequest) {
       return node
     })
 
-    // Update the workflow
-    const updateResponse = await fetch(`${N8N_API_URL}/api/v1/workflows/${workflow.id}`, {
+    // Update the workflow - sadece gerekli field'lar
+    const updatePayload = {
+      name: workflowDetail.name,
+      nodes: updatedNodes,
+      connections: workflowDetail.connections,
+      settings: workflowDetail.settings,
+    }
+
+    console.log("[v0] Updating workflow ID:", workflow.id)
+    console.log("[v0] Update payload keys:", Object.keys(updatePayload))
+
+    const updateResponse = await fetch(`${N8N_API_URL}/api/v1/workflows/${String(workflow.id)}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         "X-N8N-API-KEY": N8N_API_TOKEN,
       },
-      body: JSON.stringify({
-        name: workflowDetail.name,
-        nodes: updatedNodes,
-        connections: workflowDetail.connections,
-        settings: workflowDetail.settings,
-      }),
+      body: JSON.stringify(updatePayload),
     })
 
     console.log("[v0] Workflow update response status:", updateResponse.status)
+    console.log("[v0] Workflow update response headers:", Object.fromEntries(updateResponse.headers.entries()))
 
     if (!updateResponse.ok) {
       const errorText = await updateResponse.text()
-      console.log("[v0] Workflow update error:", errorText)
-      throw new Error(`Failed to update workflow: ${updateResponse.status}`)
+      console.log("[v0] Workflow update error response:", errorText)
+      console.log("[v0] Workflow ID that failed:", workflow.id, "Type:", typeof workflow.id)
+
+      try {
+        const errorJson = JSON.parse(errorText)
+        return NextResponse.json(
+          {
+            error: "N8N workflow update failed",
+            details: errorJson.errorMessage || errorJson.message || errorText,
+            n8nError: errorJson,
+          },
+          { status: updateResponse.status },
+        )
+      } catch {
+        throw new Error(`Failed to update workflow: ${updateResponse.status} - ${errorText}`)
+      }
     }
 
     const updateResult = await updateResponse.json()

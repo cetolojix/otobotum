@@ -493,7 +493,9 @@ function getAdvancedWorkflowTemplate(
 - Yanıtlarını kısa ve yardımcı tut
 
 ÖNEMLI: Eğer müşteri sipariş vermek istiyorsa, sipariş detaylarını (ürün adı, adet, fiyat) topla ve "SİPARİŞ:" ile başlayan bir mesaj oluştur.
-Örnek: SİPARİŞ: 2 adet Pizza Margherita, 1 adet Kola - Toplam: 150 TL`
+Örnek: SİPARİŞ: 2 adet Pizza Margherita, 1 adet Kola - Toplam: 150 TL
+
+Eğer müşteri ürün bilgisi soruyorsa, "search_website" tool'unu kullanarak web sitesinden ürün bilgilerini çek ve müşteriye sun.`
 
   return {
     name: `WhatsApp Bot - ${instanceName}`,
@@ -568,6 +570,36 @@ return [{
         position: [-400, 0],
         id: "debug-webhook-data",
         name: "Debug Webhook Data",
+      },
+      {
+        parameters: {
+          name: "search_website",
+          description:
+            "Müşterinin web sitesinden ürün bilgilerini ara ve getir. Müşteri ürün hakkında soru sorduğunda bu tool'u kullan.",
+          workflowId: {
+            __rl: true,
+            value: "",
+            mode: "list",
+          },
+          fields: {
+            values: [
+              {
+                name: "query",
+                type: "string",
+                description: "Aranacak ürün veya bilgi (örn: 'pizza fiyatları', 'menü')",
+              },
+            ],
+          },
+          specifyInputSchema: true,
+          jsonSchemaExample: JSON.stringify({
+            query: "pizza fiyatları",
+          }),
+        },
+        type: "@n8n/n8n-nodes-langchain.toolWorkflow",
+        typeVersion: 1.1,
+        position: [-320, 320],
+        id: "web-scraping-tool",
+        name: "Website Search Tool",
       },
       {
         parameters: {
@@ -754,6 +786,17 @@ return [{
             {
               node: "AI Agent",
               type: "ai_languageModel",
+              index: 0,
+            },
+          ],
+        ],
+      },
+      "Website Search Tool": {
+        ai_tool: [
+          [
+            {
+              node: "AI Agent",
+              type: "ai_tool",
               index: 0,
             },
           ],
