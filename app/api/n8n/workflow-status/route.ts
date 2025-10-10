@@ -186,9 +186,17 @@ export async function GET(request: NextRequest) {
         const workflowName = workflow.name.toLowerCase()
         const instance = instanceName.toLowerCase()
 
+        // Remove special characters and spaces for comparison
+        const normalizedWorkflowName = workflowName.replace(/[^a-z0-9]/g, "")
+        const normalizedInstance = instance.replace(/[^a-z0-9]/g, "")
+
         // Check multiple patterns for matching
         const isMatch =
+          // Direct substring match
           workflowName.includes(instance) ||
+          // Normalized match (ignoring special chars)
+          normalizedWorkflowName.includes(normalizedInstance) ||
+          // Common patterns
           workflowName.includes(`whatsapp-${instance}`) ||
           workflowName.includes(`${instance}-whatsapp`) ||
           workflowName.includes(`${instance}_whatsapp`) ||
@@ -203,6 +211,12 @@ export async function GET(request: NextRequest) {
         console.log(
           `[v0] Checking workflow "${workflow.name}" against instance "${instanceName}": ${isMatch ? "MATCH" : "NO MATCH"}`,
         )
+
+        if (data.data.length < 5) {
+          console.log(`[v0] Workflow name normalized: "${normalizedWorkflowName}"`)
+          console.log(`[v0] Instance name normalized: "${normalizedInstance}"`)
+        }
+
         return isMatch
       })
 

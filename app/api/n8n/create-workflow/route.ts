@@ -492,8 +492,15 @@ function getAdvancedWorkflowTemplate(
 - Türkçe dilinde yanıt ver
 - Yanıtlarını kısa ve yardımcı tut
 
-ÖNEMLI: Eğer müşteri sipariş vermek istiyorsa, sipariş detaylarını (ürün adı, adet, fiyat) topla ve "SİPARİŞ:" ile başlayan bir mesaj oluştur.
-Örnek: SİPARİŞ: 2 adet Pizza Margherita, 1 adet Kola - Toplam: 150 TL`
+ÜRÜN ARAMA:
+- Müşteri bir ürün hakkında bilgi sorduğunda, "search_product" tool'unu kullan
+- Ürün adını tool'a gönder ve dönen bilgileri müşteriye aktar
+- Ürün bulunamazsa, müşteriye nazikçe bildir ve başka ürün öner
+
+SİPARİŞ ALMA:
+- Eğer müşteri sipariş vermek istiyorsa, sipariş detaylarını (ürün adı, adet, fiyat) topla
+- "SİPARİŞ:" ile başlayan bir mesaj oluştur
+- Örnek: SİPARİŞ: 2 adet Pizza Margherita, 1 adet Kola - Toplam: 150 TL`
 
   return {
     name: `WhatsApp Bot - ${instanceName}`,
@@ -619,6 +626,36 @@ return [{
       },
       {
         parameters: {
+          name: "search_product",
+          description:
+            "Ürün bilgilerini aramak için kullanın. Müşteri bir ürün hakkında bilgi sorduğunda bu tool'u kullanın. Ürün adını veya anahtar kelimeyi 'productQuery' parametresine gönderin.",
+          method: "POST",
+          url: `https://www.cetobot.com/api/products/search`,
+          sendHeaders: true,
+          headerParameters: {
+            parameters: [
+              {
+                name: "Content-Type",
+                value: "application/json",
+              },
+            ],
+          },
+          sendBody: true,
+          specifyBody: "json",
+          jsonBody: `={
+  "instanceName": "${instanceName}",
+  "productQuery": "{{ $json.productQuery }}"
+}`,
+          options: {},
+        },
+        type: "@n8n/n8n-nodes-langchain.toolHttpRequest",
+        typeVersion: 1.1,
+        position: [-320, 360],
+        id: "product-search-tool",
+        name: "Search Product Tool",
+      },
+      {
+        parameters: {
           conditions: {
             options: {
               caseSensitive: false,
@@ -724,6 +761,64 @@ return [{
         id: "563ae60e-b4d9-4290-9cde-086f23a3c7ca",
         name: "Send text",
       },
+      {
+        parameters: {
+          httpMethod: "POST",
+          path: `product-search-${instanceName}`,
+          options: {},
+        },
+        type: "n8n-nodes-base.webhook",
+        typeVersion: 2.1,
+        position: [-560, 400],
+        id: "product-search-webhook",
+        name: "Product Search Webhook",
+        webhookId: `product-search-${instanceName}`,
+      },
+      {
+        parameters: {
+          method: "POST",
+          url: `https://www.cetobot.com/api/products/search`,
+          sendHeaders: true,
+          headerParameters: {
+            parameters: [
+              {
+                name: "Content-Type",
+                value: "application/json",
+              },
+            ],
+          },
+          sendBody: true,
+          contentType: "json",
+          bodyParameters: {
+            parameters: [
+              {
+                name: "instanceName",
+                value: instanceName,
+              },
+              {
+                name: "productQuery",
+                value: "={{ $json.body.productQuery || $json.productQuery }}",
+              },
+            ],
+          },
+        },
+        type: "n8n-nodes-base.httpRequest",
+        typeVersion: 4,
+        position: [-400, 400],
+        id: "call-product-search-api",
+        name: "Call Product Search API",
+      },
+      {
+        parameters: {
+          respondWith: "json",
+          responseBody: "={{ $json }}",
+        },
+        type: "n8n-nodes-base.respondToWebhook",
+        typeVersion: 1,
+        position: [-240, 400],
+        id: "product-search-response",
+        name: "Product Search Response",
+      },
     ],
     connections: {
       Webhook: {
@@ -781,6 +876,17 @@ return [{
           ],
         ],
       },
+      "Search Product Tool": {
+        ai_tool: [
+          [
+            {
+              node: "AI Agent",
+              type: "ai_tool",
+              index: 0,
+            },
+          ],
+        ],
+      },
       "Check Order": {
         main: [
           [
@@ -804,6 +910,28 @@ return [{
           [
             {
               node: "Send text",
+              type: "main",
+              index: 0,
+            },
+          ],
+        ],
+      },
+      "Product Search Webhook": {
+        main: [
+          [
+            {
+              node: "Call Product Search API",
+              type: "main",
+              index: 0,
+            },
+          ],
+        ],
+      },
+      "Call Product Search API": {
+        main: [
+          [
+            {
+              node: "Product Search Response",
               type: "main",
               index: 0,
             },
