@@ -2,7 +2,7 @@
   // Get configuration
   const config = window.whatsappAIConfig || {}
   const instanceName = config.instanceName || "default"
-  const apiUrl = config.apiUrl || "/api/public/chat/" + instanceName
+  const apiUrl = config.apiUrl || "https://cetobot.com/api/public/chat/" + instanceName
   const primaryColor = config.primaryColor || "#3b82f6"
   const position = config.position || "right"
   const welcomeMessage = config.welcomeMessage || "Merhaba! Size nasıl yardımcı olabilirim?"

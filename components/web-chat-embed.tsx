@@ -19,7 +19,7 @@ export function WebChatEmbed({ instanceName }: WebChatEmbedProps) {
   const [position, setPosition] = useState<"right" | "left">("right")
   const [welcomeMessage, setWelcomeMessage] = useState("Merhaba! Size nasıl yardımcı olabilirim?")
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://your-domain.com"
+  const siteUrl = "https://cetobot.com"
 
   const embedCode = ` WhatsApp AI Chat Widget 
 <script>
