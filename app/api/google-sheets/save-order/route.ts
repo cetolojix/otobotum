@@ -29,18 +29,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save order directly to database
+    // Save order to database
     const { data: order, error: orderError } = await supabase
       .from("google_sheets_orders")
       .insert({
+        config_id: null, // Google Sheets config artık kullanılmıyor
         instance_name: instanceName,
         customer_phone: customerPhone,
         customer_name: customerName || null,
         order_details: orderDetails,
         order_amount: finalAmount || null,
-        order_date: new Date().toISOString(),
+        order_date: new Date().toISOString(), // Order date eklendi
         synced_to_sheets: false,
-        config_id: null,
       })
       .select()
       .single()

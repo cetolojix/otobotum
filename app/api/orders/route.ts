@@ -1,29 +1,28 @@
-import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { NextResponse } from "next/server"
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const instanceName = searchParams.get("instance")
+
+    if (!instanceName) {
+      return NextResponse.json({ error: "Instance name is required" }, { status: 400 })
+    }
+
     const supabase = await createClient()
 
-    // Get authenticated user
+    // Get user
     const {
       data: { user },
-      error: authError,
+      error: userError,
     } = await supabase.auth.getUser()
 
-    if (authError || !user) {
+    if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get instance_name from query params
-    const { searchParams } = new URL(request.url)
-    const instanceName = searchParams.get("instance_name")
-
-    if (!instanceName) {
-      return NextResponse.json({ error: "instance_name is required" }, { status: 400 })
-    }
-
-    // Fetch orders for this instance
+    // Get orders for this instance
     const { data: orders, error: ordersError } = await supabase
       .from("google_sheets_orders")
       .select("*")
@@ -31,7 +30,7 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
 
     if (ordersError) {
-      console.error("[v0] Failed to fetch orders:", ordersError)
+      console.error("[v0] Error fetching orders:", ordersError)
       return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 })
     }
 
@@ -44,7 +43,7 @@ export async function GET(request: NextRequest) {
     today.setHours(0, 0, 0, 0)
     const todayOrders =
       orders?.filter((order) => {
-        const orderDate = new Date(order.order_date)
+        const orderDate = new Date(order.created_at)
         return orderDate >= today
       }).length || 0
 
@@ -57,7 +56,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("[v0] Orders API error:", error)
+    console.error("[v0] Error in orders API:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

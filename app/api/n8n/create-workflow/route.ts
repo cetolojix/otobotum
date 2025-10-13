@@ -490,10 +490,7 @@ function getAdvancedWorkflowTemplate(
 - Çözemediğin sorunları insan desteğine yönlendir
 - Her zaman saygılı ve anlayışlı ol
 - Türkçe dilinde yanıt ver
-- Yanıtlarını kısa ve yardımcı tut
-
-ÖNEMLI: Eğer müşteri sipariş vermek istiyorsa, sipariş detaylarını (ürün adı, adet, fiyat) topla ve "SİPARİŞ:" ile başlayan bir mesaj oluştur.
-Örnek: SİPARİŞ: 2 adet Pizza Margherita, 1 adet Kola - Toplam: 150 TL`
+- Yanıtlarını kısa ve yardımcı tut`
 
   return {
     name: `WhatsApp Bot - ${instanceName}`,
@@ -513,55 +510,47 @@ function getAdvancedWorkflowTemplate(
       },
       {
         parameters: {
-          jsCode: `
-console.log("[v0] === WEBHOOK DEBUG START ===");
-console.log("[v0] Full webhook data:", JSON.stringify($input.all(), null, 2));
-console.log("[v0] First item data:", JSON.stringify($input.first().json, null, 2));
-
+          jsCode: `// Simplified webhook data extraction with better error handling
 const data = $input.first().json;
-console.log("[v0] Checking all possible phone number paths:");
-console.log("[v0] sender:", data.sender);
-console.log("[v0] data.key.remoteJid:", data.data?.key?.remoteJid);
-console.log("[v0] key.remoteJid:", data.key?.remoteJid);
-console.log("[v0] data.remoteJid:", data.data?.remoteJid);
-console.log("[v0] remoteJid:", data.remoteJid);
 
-console.log("[v0] Checking message text paths:");
-console.log("[v0] data.message?.conversation:", data.data?.message?.conversation);
-console.log("[v0] message?.conversation:", data.message?.conversation);
-console.log("[v0] data.message?.extendedTextMessage?.text:", data.data?.message?.extendedTextMessage?.text);
-console.log("[v0] message?.extendedTextMessage?.text:", data.message?.extendedTextMessage?.text);
+// Extract phone number from all possible paths
+let phoneNumber = 
+  data.sender || 
+  data.data?.key?.remoteJid || 
+  data.key?.remoteJid || 
+  data.data?.remoteJid || 
+  data.remoteJid ||
+  data.body?.data?.key?.remoteJid ||
+  data.body?.key?.remoteJid;
 
-let phoneNumber = data.sender || 
-                 data.data?.key?.remoteJid || 
-                 data.key?.remoteJid || 
-                 data.data?.remoteJid || 
-                 data.remoteJid || 
-                 'unknown';
-
+// Clean phone number
 if (phoneNumber && phoneNumber !== 'unknown') {
   phoneNumber = phoneNumber.replace(/@s\\.whatsapp\\.net|@c\\.us/g, '');
-  console.log("[v0] Cleaned phone number:", phoneNumber);
+} else {
+  // If still not found, log full data structure
+  console.log("[v0] PHONE NOT FOUND - Full webhook data:", JSON.stringify(data, null, 2));
+  phoneNumber = 'unknown';
 }
 
-let messageText = data.data?.message?.conversation || 
-                 data.message?.conversation || 
-                 data.data?.message?.extendedTextMessage?.text || 
-                 data.message?.extendedTextMessage?.text || 
-                 data.data?.message?.imageMessage?.caption ||
-                 data.message?.imageMessage?.caption ||
-                 'No message text found';
+// Extract message text from all possible paths
+let messageText = 
+  data.data?.message?.conversation || 
+  data.message?.conversation || 
+  data.data?.message?.extendedTextMessage?.text || 
+  data.message?.extendedTextMessage?.text || 
+  data.data?.message?.imageMessage?.caption ||
+  data.message?.imageMessage?.caption ||
+  data.body?.data?.message?.conversation ||
+  data.body?.message?.conversation ||
+  'No message text found';
 
-console.log("[v0] Final extracted phone number:", phoneNumber);
-console.log("[v0] Final extracted message text:", messageText);
-console.log("[v0] === WEBHOOK DEBUG END ===");
+console.log("[v0] Extracted - Phone:", phoneNumber, "Message:", messageText);
 
 return [{
   ...data,
   extractedPhone: phoneNumber,
   extractedMessage: messageText
-}];
-          `,
+}];`,
         },
         type: "n8n-nodes-base.code",
         typeVersion: 2,
@@ -572,7 +561,7 @@ return [{
       {
         parameters: {
           promptType: "define",
-          text: "={{ $json.body.data.message.conversation }}",
+          text: "={{ $('Debug Webhook Data').first().json.extractedMessage }}",
           options: {
             systemMessage: systemPrompt,
           },
@@ -619,69 +608,6 @@ return [{
       },
       {
         parameters: {
-          conditions: {
-            options: {
-              caseSensitive: false,
-            },
-            conditions: [
-              {
-                leftValue: "={{ $json.output || $json.result }}",
-                rightValue: "SİPARİŞ:",
-                operator: {
-                  type: "string",
-                  operation: "contains",
-                },
-              },
-            ],
-          },
-        },
-        type: "n8n-nodes-base.if",
-        typeVersion: 2,
-        position: [-80, 0],
-        id: "check-order-node",
-        name: "Check Order",
-      },
-      {
-        parameters: {
-          method: "POST",
-          url: `https://www.cetobot.com/api/google-sheets/save-order`,
-          sendHeaders: true,
-          headerParameters: {
-            parameters: [
-              {
-                name: "Content-Type",
-                value: "application/json",
-              },
-            ],
-          },
-          sendBody: true,
-          contentType: "json",
-          bodyParameters: {
-            parameters: [
-              {
-                name: "instanceName",
-                value: instanceName,
-              },
-              {
-                name: "customerPhone",
-                value:
-                  "={{ $('Debug Webhook Data').first().json.extractedPhone || $('Webhook').first().json.body?.data?.key?.remoteJid || '' }}",
-              },
-              {
-                name: "orderDetails",
-                value: "={{ $('AI Agent').first().json.output || $('AI Agent').first().json.result }}",
-              },
-            ],
-          },
-        },
-        type: "n8n-nodes-base.httpRequest",
-        typeVersion: 4,
-        position: [80, -100],
-        id: "save-order-node",
-        name: "Save Order",
-      },
-      {
-        parameters: {
           method: "POST",
           url: `https://evolu.cetoloji.com/message/sendText/${instanceName}`,
           sendHeaders: true,
@@ -703,8 +629,7 @@ return [{
             parameters: [
               {
                 name: "number",
-                value:
-                  "={{ ( $('Webhook').first().json.body?.data?.key?.remoteJid || $('Webhook').first().json.body?.key?.remoteJid || $('Webhook').first().json.data?.key?.remoteJid || $('Webhook').first().json.key?.remoteJid || '' ).replace('@s.whatsapp.net','') }}",
+                value: "={{ $('Debug Webhook Data').first().json.extractedPhone }}",
               },
               {
                 name: "text",
@@ -720,7 +645,7 @@ return [{
         },
         type: "n8n-nodes-base.httpRequest",
         typeVersion: 4,
-        position: [240, 0],
+        position: [-80, 0],
         id: "563ae60e-b4d9-4290-9cde-086f23a3c7ca",
         name: "Send text",
       },
@@ -763,7 +688,7 @@ return [{
         main: [
           [
             {
-              node: "Check Order",
+              node: "Send text",
               type: "main",
               index: 0,
             },
@@ -776,35 +701,6 @@ return [{
             {
               node: "AI Agent",
               type: "ai_memory",
-              index: 0,
-            },
-          ],
-        ],
-      },
-      "Check Order": {
-        main: [
-          [
-            {
-              node: "Save Order",
-              type: "main",
-              index: 0,
-            },
-          ],
-          [
-            {
-              node: "Send text",
-              type: "main",
-              index: 0,
-            },
-          ],
-        ],
-      },
-      "Save Order": {
-        main: [
-          [
-            {
-              node: "Send text",
-              type: "main",
               index: 0,
             },
           ],

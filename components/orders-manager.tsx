@@ -4,8 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ShoppingCart, TrendingUp, Calendar, Phone, Package } from "lucide-react"
-import { debugLog } from "@/lib/debug"
+import { ShoppingCart, Calendar, DollarSign } from "lucide-react"
 
 interface Order {
   id: string
@@ -40,31 +39,20 @@ export function OrdersManager({ instanceName }: OrdersManagerProps) {
   const fetchOrders = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/orders?instance_name=${encodeURIComponent(instanceName)}`)
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch orders")
-      }
-
+      const response = await fetch(`/api/orders?instance=${encodeURIComponent(instanceName)}`)
       const data = await response.json()
-      setOrders(data.orders)
-      setStats(data.stats)
+
+      if (response.ok) {
+        setOrders(data.orders)
+        setStats(data.stats)
+      } else {
+        console.error("[v0] Failed to fetch orders:", data.error)
+      }
     } catch (error) {
-      debugLog("Failed to fetch orders:", error)
+      console.error("[v0] Error fetching orders:", error)
     } finally {
       setLoading(false)
     }
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("tr-TR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
   }
 
   const formatCurrency = (amount: number) => {
@@ -74,14 +62,23 @@ export function OrdersManager({ instanceName }: OrdersManagerProps) {
     }).format(amount)
   }
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString("tr-TR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-cyan mx-auto"></div>
-          <p className="text-muted-foreground">Siparişler yükleniyor...</p>
-        </div>
-      </div>
+      <Card className="hologram-card border-0 backdrop-blur-sm shadow-xl">
+        <CardContent className="p-8">
+          <div className="text-center text-muted-foreground">Siparişler yükleniyor...</div>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -103,11 +100,11 @@ export function OrdersManager({ instanceName }: OrdersManagerProps) {
         <Card className="hologram-card border-0 backdrop-blur-sm shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Toplam Tutar</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(stats.totalAmount)}</div>
-            <p className="text-xs text-muted-foreground">Tüm zamanlar</p>
+            <p className="text-xs text-muted-foreground">Tüm siparişler</p>
           </CardContent>
         </Card>
 
@@ -131,36 +128,27 @@ export function OrdersManager({ instanceName }: OrdersManagerProps) {
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (
-            <div className="text-center py-12 space-y-4">
-              <Package className="h-16 w-16 text-muted-foreground mx-auto opacity-50" />
-              <div>
-                <p className="text-lg font-medium text-muted-foreground">Henüz sipariş yok</p>
-                <p className="text-sm text-muted-foreground">Müşterileriniz sipariş verdiğinde burada görünecek</p>
-              </div>
+            <div className="text-center py-8 text-muted-foreground">
+              <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Henüz sipariş bulunmuyor</p>
             </div>
           ) : (
             <ScrollArea className="h-[500px] pr-4">
               <div className="space-y-4">
                 {orders.map((order) => (
-                  <Card key={order.id} className="hologram-card border-0 bg-background/50 backdrop-blur-sm">
+                  <Card key={order.id} className="border border-border/50 bg-background/50">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="space-y-2 flex-1">
                           <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4 text-neon-cyan" />
-                            <span className="font-medium">{order.customer_phone}</span>
-                            {order.customer_name && (
-                              <Badge variant="outline" className="text-xs">
-                                {order.customer_name}
-                              </Badge>
-                            )}
+                            <Badge variant="outline" className="font-mono">
+                              {order.customer_phone}
+                            </Badge>
+                            {order.customer_name && <span className="text-sm font-medium">{order.customer_name}</span>}
                           </div>
-                          <div className="text-sm text-muted-foreground">{order.order_details}</div>
+                          <p className="text-sm text-muted-foreground">{order.order_details}</p>
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {formatDate(order.order_date)}
-                            </span>
+                            <span>{formatDate(order.created_at)}</span>
                           </div>
                         </div>
                         <div className="text-right">
