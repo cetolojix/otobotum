@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation"
 import { updateInstanceStatus } from "@/app/actions/update-instance-status"
 import { deleteInstance } from "@/app/actions/delete-instance"
 import { YapayZekaChatTester } from "@/components/yapay-zeka-chat-tester"
+import { WebChatEmbed } from "@/components/web-chat-embed" // Added import for WebChatEmbed
 import { debugLog } from "@/lib/debug"
 
 interface Instance {
@@ -398,7 +399,7 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
                 {selectedInstance && (
                   <Tabs defaultValue="dashboard" className="space-y-6 sm:space-y-8">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <TabsList className="hologram-card grid w-full sm:max-w-3xl grid-cols-3 h-12 sm:h-14 bg-background/50 backdrop-blur-sm border-0 shadow-lg">
+                      <TabsList className="hologram-card grid w-full sm:max-w-4xl grid-cols-4 h-12 sm:h-14 bg-background/50 backdrop-blur-sm border-0 shadow-lg">
                         <TabsTrigger
                           value="dashboard"
                           className="gap-1 sm:gap-2 font-medium text-xs sm:text-sm data-[state=active]:bg-neon-blue/20 data-[state=active]:text-neon-cyan px-2 sm:px-3"
@@ -414,6 +415,14 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
                           <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
                           <span className="hidden xs:inline">YZ</span>
                           <span className="hidden sm:inline">Yapay Zeka Ayarları</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="web-chat"
+                          className="gap-1 sm:gap-2 font-medium text-xs sm:text-sm data-[state=active]:bg-neon-blue/20 data-[state=active]:text-neon-cyan px-2 sm:px-3"
+                        >
+                          <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden xs:inline">Web</span>
+                          <span className="hidden sm:inline">Chat</span>
                         </TabsTrigger>
                         <TabsTrigger
                           value="test-chat"
@@ -439,6 +448,27 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
 
                     <TabsContent value="ai-config" className="space-y-6">
                       <PromptCustomizer instanceName={selectedInstance} onPromptChange={setCustomPrompt} />
+                    </TabsContent>
+
+                    <TabsContent value="web-chat" className="space-y-6">
+                      <div className="max-w-5xl mx-auto">
+                        <div className="text-center mb-6 sm:mb-8 space-y-4">
+                          <div className="relative">
+                            <h3 className="text-2xl sm:text-4xl font-bold tech-gradient text-balance">
+                              Web Chat Widget
+                            </h3>
+                            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 sm:w-32 h-px data-stream"></div>
+                          </div>
+                          <p className="text-base sm:text-xl text-foreground/80 text-balance leading-relaxed px-4">
+                            Sitenize canlı destek chat widget'ı ekleyin.
+                            <span className="text-neon-cyan font-semibold">
+                              {" "}
+                              Müşterileriniz AI bot'unuzla doğrudan konuşabilir.
+                            </span>
+                          </p>
+                        </div>
+                        <WebChatEmbed instanceName={selectedInstance} />
+                      </div>
                     </TabsContent>
 
                     <TabsContent value="test-chat" className="space-y-6">
