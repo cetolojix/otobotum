@@ -2,10 +2,24 @@
   // Get configuration
   const config = window.whatsappAIConfig || {}
   const instanceName = config.instanceName || "default"
-  const apiUrl = config.apiUrl || "https://cetobot.com/api/public/chat/" + instanceName
+
+  let apiUrl = config.apiUrl
+  if (!apiUrl) {
+    const hostname = window.location.hostname
+    // v0 preview veya localhost ise, relative URL kullan
+    if (hostname.includes("v0.app") || hostname === "localhost" || hostname === "127.0.0.1") {
+      apiUrl = `/api/public/chat/${instanceName}`
+    } else {
+      // Production'da cetobot.com kullan
+      apiUrl = `https://cetobot.com/api/public/chat/${instanceName}`
+    }
+  }
+
   const primaryColor = config.primaryColor || "#3b82f6"
   const position = config.position || "right"
   const welcomeMessage = config.welcomeMessage || "Merhaba! Size nasıl yardımcı olabilirim?"
+
+  console.log("[v0] Chat widget initialized with API URL:", apiUrl)
 
   // Create styles
   const styles = `
@@ -327,6 +341,8 @@
     // Show typing
     showTyping()
 
+    console.log("[v0] Sending message to API:", apiUrl)
+
     try {
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -339,7 +355,16 @@
         }),
       })
 
+      console.log("[v0] API response status:", response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("[v0] API error response:", errorText)
+        throw new Error(`API error: ${response.status}`)
+      }
+
       const data = await response.json()
+      console.log("[v0] API response data:", data)
 
       hideTyping()
 
@@ -350,8 +375,9 @@
         addMessage("Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.", "bot")
       }
     } catch (error) {
+      console.error("[v0] Chat widget error:", error)
       hideTyping()
-      addMessage("Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.", "bot")
+      addMessage("Bağlantı hatası. Lütfen daha sonra tekrar deneyin.", "bot")
     } finally {
       sendBtn.disabled = false
       input.focus()
