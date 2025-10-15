@@ -118,6 +118,9 @@ async function handleIncomingMessage(
     const phoneNumber = messageData.from.replace("@s.whatsapp.net", "")
     console.log(`[v0] [Webhook] Processing message from phone: ${phoneNumber}`)
 
+    const { forwardToChatwoot } = await import("@/lib/chatwoot-bridge")
+    await forwardToChatwoot(instanceName, messageData, instance.user_id)
+
     let { data: contact, error: contactError } = await supabase
       .from("contacts")
       .select("*")

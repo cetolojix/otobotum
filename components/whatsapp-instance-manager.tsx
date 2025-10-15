@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, TestTube, Bot, Plus, MessageSquare, LogOut, User, MessageCircle } from "lucide-react"
+import { Settings, TestTube, Bot, Plus, MessageSquare, LogOut, User, MessageCircle, Inbox } from "lucide-react"
 import { InstanceSetup } from "@/components/instance-setup"
 import { QRCodeDisplay } from "@/components/qr-code-display"
 import { PromptCustomizer } from "@/components/prompt-customizer"
@@ -22,7 +22,8 @@ import { useRouter } from "next/navigation"
 import { updateInstanceStatus } from "@/app/actions/update-instance-status"
 import { deleteInstance } from "@/app/actions/delete-instance"
 import { YapayZekaChatTester } from "@/components/yapay-zeka-chat-tester"
-import { WebChatEmbed } from "@/components/web-chat-embed" // Added import for WebChatEmbed
+import { WebChatEmbed } from "@/components/web-chat-embed"
+import { ChatwootSettings } from "@/components/chatwoot-settings"
 import { debugLog } from "@/lib/debug"
 
 interface Instance {
@@ -370,11 +371,39 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
             </Card>
           )}
 
+          {connectedInstances.length === 0 && currentStep !== "qr" && (
+            <div className="space-y-6">
+              <FeatureShowcase language={language} />
+
+              {/* Chatwoot Entegrasyonu Kartı */}
+              <Card className="hologram-card border-0 bg-gradient-to-r from-purple-50/10 to-blue-50/10 backdrop-blur-sm shadow-2xl">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-neon-purple to-neon-blue rounded-xl flex items-center justify-center shadow-lg shadow-neon-purple/30">
+                      <Inbox className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-bold neon-text">Chatwoot Entegrasyonu</CardTitle>
+                      <CardDescription className="text-base text-neon-cyan font-medium">
+                        Tüm mesajlaşma kanallarınızı tek yerden yönetin
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-foreground/80 leading-relaxed">
+                    WhatsApp, Instagram, Telegram ve Web Chat kanallarınızı Chatwoot ile entegre edin.
+                    <span className="text-neon-cyan font-semibold"> Tüm mesajlarınız tek bir inbox'ta birleşir.</span>
+                  </p>
+                  <ChatwootSettings instanceName="" />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {(currentStep === "setup" || currentStep === "qr") && (
             <ProgressSteps currentStep={currentStep} language={language} />
           )}
-
-          {connectedInstances.length === 0 && currentStep !== "qr" && <FeatureShowcase language={language} />}
 
           {/* Main Setup/Management Area */}
           <div className="space-y-8">
@@ -399,7 +428,7 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
                 {selectedInstance && (
                   <Tabs defaultValue="dashboard" className="space-y-6 sm:space-y-8">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <TabsList className="hologram-card grid w-full sm:max-w-4xl grid-cols-4 h-12 sm:h-14 bg-background/50 backdrop-blur-sm border-0 shadow-lg">
+                      <TabsList className="hologram-card grid w-full sm:max-w-5xl grid-cols-5 h-12 sm:h-14 bg-background/50 backdrop-blur-sm border-0 shadow-lg">
                         <TabsTrigger
                           value="dashboard"
                           className="gap-1 sm:gap-2 font-medium text-xs sm:text-sm data-[state=active]:bg-neon-blue/20 data-[state=active]:text-neon-cyan px-2 sm:px-3"
@@ -415,6 +444,13 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
                           <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
                           <span className="hidden xs:inline">YZ</span>
                           <span className="hidden sm:inline">Yapay Zeka Ayarları</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="chatwoot"
+                          className="gap-1 sm:gap-2 font-medium text-xs sm:text-sm data-[state=active]:bg-neon-blue/20 data-[state=active]:text-neon-cyan px-2 sm:px-3"
+                        >
+                          <Inbox className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden xs:inline">Chatwoot</span>
                         </TabsTrigger>
                         <TabsTrigger
                           value="web-chat"
@@ -448,6 +484,27 @@ export function WhatsAppInstanceManager({ user, profile, instances }: WhatsAppIn
 
                     <TabsContent value="ai-config" className="space-y-6">
                       <PromptCustomizer instanceName={selectedInstance} onPromptChange={setCustomPrompt} />
+                    </TabsContent>
+
+                    <TabsContent value="chatwoot" className="space-y-6">
+                      <div className="max-w-5xl mx-auto">
+                        <div className="text-center mb-6 sm:mb-8 space-y-4">
+                          <div className="relative">
+                            <h3 className="text-2xl sm:text-4xl font-bold tech-gradient text-balance">
+                              Chatwoot Entegrasyonu
+                            </h3>
+                            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 sm:w-32 h-px data-stream"></div>
+                          </div>
+                          <p className="text-base sm:text-xl text-foreground/80 text-balance leading-relaxed px-4">
+                            WhatsApp, Instagram, Telegram ve Web Chat kanallarını tek yerden yönetin.
+                            <span className="text-neon-cyan font-semibold">
+                              {" "}
+                              Tüm mesajlarınız Chatwoot'ta birleşir.
+                            </span>
+                          </p>
+                        </div>
+                        <ChatwootSettings instanceName={selectedInstance} />
+                      </div>
                     </TabsContent>
 
                     <TabsContent value="web-chat" className="space-y-6">
